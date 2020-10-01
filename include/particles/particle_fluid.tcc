@@ -69,8 +69,7 @@ inline void mpm::FluidParticle<1>::map_internal_force() noexcept {
     force[0] = dn_dx_(i, 0) * total_stress[0];
     force *= -1 * this->volume_;
 
-    nodes_[i]->update_internal_force(true, mpm::ParticlePhase::SinglePhase,
-                                     force);
+    nodes_[i]->update_internal_force(true, this->phase(), force);
   }
 }
 
@@ -95,8 +94,7 @@ inline void mpm::FluidParticle<2>::map_internal_force() noexcept {
 
     force *= -1. * this->volume_;
 
-    nodes_[i]->update_internal_force(true, mpm::ParticlePhase::SinglePhase,
-                                     force);
+    nodes_[i]->update_internal_force(true, this->phase(), force);
   }
 }
 
@@ -130,8 +128,7 @@ inline void mpm::FluidParticle<3>::map_internal_force() noexcept {
 
     force *= -1. * this->volume_;
 
-    nodes_[i]->update_internal_force(true, mpm::ParticlePhase::SinglePhase,
-                                     force);
+    nodes_[i]->update_internal_force(true, this->phase(), force);
   }
 }
 

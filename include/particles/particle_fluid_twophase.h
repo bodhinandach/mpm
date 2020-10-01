@@ -41,6 +41,10 @@ class TwoPhaseFluidParticle : public mpm::FluidParticle<Tdim> {
     return (Tdim == 2) ? "P2DFLUID2PHASE" : "P3DFLUID2PHASE";
   }
 
+  //! Return nodal phase index associated with particle
+  //! \retval phase Nodal phase index
+  unsigned phase() const override { return mpm::ParticlePhase::Liquid; };
+
   //! Return phase boolean
   //! \retval phase boolean associated with phase index
   bool phase_status(unsigned phase) const override {

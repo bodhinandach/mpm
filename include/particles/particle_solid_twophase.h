@@ -46,6 +46,10 @@ class TwoPhaseSolidParticle : public mpm::Particle<Tdim> {
     return (phase == mpm::ParticlePhase::Solid) ? true : false;
   };
 
+  //! Return nodal phase index associated with particle
+  //! \retval phase Nodal phase index
+  unsigned phase() const override { return mpm::ParticlePhase::Solid; };
+
   //! Compute solid mass
   void compute_mass() noexcept override;
 
