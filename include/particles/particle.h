@@ -155,11 +155,16 @@ class Particle : public ParticleBase<Tdim> {
   //! Return mass of the particles
   double mass() const override { return mass_; }
 
+  //! Return nodal phase index associated with particle
+  //! \retval phase Nodal phase index
+  unsigned phase() const override { return mpm::ParticlePhase::SinglePhase; };
+
   //! Assign material
   //! \param[in] material Pointer to a material
   //! \param[in] phase Index to indicate phase
-  bool assign_material(const std::shared_ptr<Material<Tdim>>& material,
-                       unsigned phase = mpm::ParticlePhase::Solid) override;
+  bool assign_material(
+      const std::shared_ptr<Material<Tdim>>& material,
+      unsigned phase = mpm::ParticlePhase::SinglePhase) override;
 
   //! Compute strain
   //! \param[in] dt Analysis time step
@@ -239,7 +244,7 @@ class Particle : public ParticleBase<Tdim> {
   bool assign_material_state_vars(
       const mpm::dense_map& state_vars,
       const std::shared_ptr<mpm::Material<Tdim>>& material,
-      unsigned phase = mpm::ParticlePhase::Solid) override;
+      unsigned phase = mpm::ParticlePhase::SinglePhase) override;
 
   //! Assign a state variable
   //! \param[in] var State variable
@@ -247,7 +252,7 @@ class Particle : public ParticleBase<Tdim> {
   //! \param[in] phase Index to indicate phase
   void assign_state_variable(
       const std::string& var, double value,
-      unsigned phase = mpm::ParticlePhase::Solid) override;
+      unsigned phase = mpm::ParticlePhase::SinglePhase) override;
 
   //! Return a state variable
   //! \param[in] var State variable
@@ -255,7 +260,7 @@ class Particle : public ParticleBase<Tdim> {
   //! \retval Quantity of the state history variable
   double state_variable(
       const std::string& var,
-      unsigned phase = mpm::ParticlePhase::Solid) const override {
+      unsigned phase = mpm::ParticlePhase::SinglePhase) const override {
     return (phase < state_variables_.size() &&
             state_variables_[phase].find(var) != state_variables_[phase].end())
                ? state_variables_[phase].at(var)
@@ -264,24 +269,26 @@ class Particle : public ParticleBase<Tdim> {
 
   //! Map particle pressure to nodes
   bool map_pressure_to_nodes(
-      unsigned phase = mpm::ParticlePhase::Solid) noexcept override;
+      unsigned phase = mpm::ParticlePhase::SinglePhase) noexcept override;
 
   //! Compute pressure smoothing of the particle based on nodal pressure
   //! $$\hat{p}_p = \sum_{i = 1}^{n_n} N_i(x_p) p_i$$
   bool compute_pressure_smoothing(
-      unsigned phase = mpm::ParticlePhase::Solid) noexcept override;
+      unsigned phase = mpm::ParticlePhase::SinglePhase) noexcept override;
 
   //! Assign a state variable
   //! \param[in] value Particle pressure to be assigned
   //! \param[in] phase Index to indicate phase
-  void assign_pressure(double pressure,
-                       unsigned phase = mpm::ParticlePhase::Solid) override {
+  void assign_pressure(
+      double pressure,
+      unsigned phase = mpm::ParticlePhase::SinglePhase) override {
     this->assign_state_variable("pressure", pressure, phase);
   }
 
   //! Return pressure of the particles
   //! \param[in] phase Index to indicate phase
-  double pressure(unsigned phase = mpm::ParticlePhase::Solid) const override {
+  double pressure(
+      unsigned phase = mpm::ParticlePhase::SinglePhase) const override {
     return this->state_variable("pressure", phase);
   }
 

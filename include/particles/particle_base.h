@@ -161,20 +161,24 @@ class ParticleBase {
   //! Map multimaterial domain gradients to nodes
   virtual void map_multimaterial_domain_gradients_to_nodes() noexcept = 0;
 
+  //! Return nodal phase index associated with particle
+  virtual unsigned phase() const = 0;
+
   //! Assign material
-  virtual bool assign_material(const std::shared_ptr<Material<Tdim>>& material,
-                               unsigned phase = mpm::ParticlePhase::Solid) = 0;
+  virtual bool assign_material(
+      const std::shared_ptr<Material<Tdim>>& material,
+      unsigned phase = mpm::ParticlePhase::SinglePhase) = 0;
 
   //! Return material of particle
   //! \param[in] phase Index to indicate material phase
   std::shared_ptr<Material<Tdim>> material(
-      unsigned phase = mpm::ParticlePhase::Solid) const {
+      unsigned phase = mpm::ParticlePhase::SinglePhase) const {
     return material_[phase];
   }
 
   //! Return material id
   //! \param[in] phase Index to indicate material phase
-  unsigned material_id(unsigned phase = mpm::ParticlePhase::Solid) const {
+  unsigned material_id(unsigned phase = mpm::ParticlePhase::SinglePhase) const {
     return material_id_[phase];
   }
 
@@ -182,24 +186,24 @@ class ParticleBase {
   virtual bool assign_material_state_vars(
       const mpm::dense_map& state_vars,
       const std::shared_ptr<mpm::Material<Tdim>>& material,
-      unsigned phase = mpm::ParticlePhase::Solid) = 0;
+      unsigned phase = mpm::ParticlePhase::SinglePhase) = 0;
 
   //! Return state variables
   //! \param[in] phase Index to indicate material phase
   mpm::dense_map state_variables(
-      unsigned phase = mpm::ParticlePhase::Solid) const {
+      unsigned phase = mpm::ParticlePhase::SinglePhase) const {
     return state_variables_[phase];
   }
 
   //! Assign a state variable
   virtual void assign_state_variable(
       const std::string& var, double value,
-      unsigned phase = mpm::ParticlePhase::Solid) = 0;
+      unsigned phase = mpm::ParticlePhase::SinglePhase) = 0;
 
   //! Return a state variable
   virtual double state_variable(
       const std::string& var,
-      unsigned phase = mpm::ParticlePhase::Solid) const = 0;
+      unsigned phase = mpm::ParticlePhase::SinglePhase) const = 0;
 
   //! Assign status
   void assign_status(bool status) { status_ = status; }
@@ -217,11 +221,12 @@ class ParticleBase {
   virtual double mass() const = 0;
 
   //! Assign pressure
-  virtual void assign_pressure(double pressure,
-                               unsigned phase = mpm::ParticlePhase::Solid) = 0;
+  virtual void assign_pressure(
+      double pressure, unsigned phase = mpm::ParticlePhase::SinglePhase) = 0;
 
   //! Return pressure
-  virtual double pressure(unsigned phase = mpm::ParticlePhase::Solid) const = 0;
+  virtual double pressure(
+      unsigned phase = mpm::ParticlePhase::SinglePhase) const = 0;
 
   //! Compute strain
   virtual void compute_strain(double dt) noexcept = 0;
@@ -255,11 +260,11 @@ class ParticleBase {
 
   //! Map particle pressure to nodes
   virtual bool map_pressure_to_nodes(
-      unsigned phase = mpm::ParticlePhase::Solid) noexcept = 0;
+      unsigned phase = mpm::ParticlePhase::SinglePhase) noexcept = 0;
 
   //! Compute pressure smoothing of the particle based on nodal pressure
   virtual bool compute_pressure_smoothing(
-      unsigned phase = mpm::ParticlePhase::Solid) noexcept = 0;
+      unsigned phase = mpm::ParticlePhase::SinglePhase) noexcept = 0;
 
   //! Assign velocity
   virtual bool assign_velocity(const VectorDim& velocity) = 0;

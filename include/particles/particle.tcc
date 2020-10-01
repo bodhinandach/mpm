@@ -97,7 +97,7 @@ bool mpm::Particle<Tdim>::initialise_particle(PODParticle& particle) {
   this->nodes_.clear();
 
   // Material id
-  this->material_id_[mpm::ParticlePhase::Solid] = particle.material_id;
+  this->material_id_[mpm::ParticlePhase::SinglePhase] = particle.material_id;
 
   return true;
 }
@@ -111,11 +111,12 @@ bool mpm::Particle<Tdim>::initialise_particle(
 
   assert(materials.size() == 1);
 
-  if (materials.at(mpm::ParticlePhase::Solid) != nullptr) {
-    if (this->material_id() == materials.at(mpm::ParticlePhase::Solid)->id() ||
+  if (materials.at(mpm::ParticlePhase::SinglePhase) != nullptr) {
+    if (this->material_id() ==
+            materials.at(mpm::ParticlePhase::SinglePhase)->id() ||
         this->material_id() == std::numeric_limits<unsigned>::max()) {
       bool assign_mat =
-          this->assign_material(materials.at(mpm::ParticlePhase::Solid));
+          this->assign_material(materials.at(mpm::ParticlePhase::SinglePhase));
       if (!assign_mat) throw std::runtime_error("Material assignment failed");
       // Reinitialize state variables
       auto mat_state_vars = (this->material())->initialise_state_variables();
@@ -123,8 +124,8 @@ bool mpm::Particle<Tdim>::initialise_particle(
         unsigned i = 0;
         auto state_variables = (this->material())->state_variables();
         for (const auto& state_var : state_variables) {
-          this->state_variables_[mpm::ParticlePhase::Solid].at(state_var) =
-              particle.svars[i];
+          this->state_variables_[mpm::ParticlePhase::SinglePhase].at(
+              state_var) = particle.svars[i];
           ++i;
         }
       }
@@ -169,9 +170,9 @@ std::shared_ptr<void> mpm::Particle<Tdim>::pod() {
   particle_data->mass = this->mass();
   particle_data->volume = this->volume();
   particle_data->pressure =
-      (state_variables_[mpm::ParticlePhase::Solid].find("pressure") !=
-       state_variables_[mpm::ParticlePhase::Solid].end())
-          ? state_variables_[mpm::ParticlePhase::Solid].at("pressure")
+      (state_variables_[mpm::ParticlePhase::SinglePhase].find("pressure") !=
+       state_variables_[mpm::ParticlePhase::SinglePhase].end())
+          ? state_variables_[mpm::ParticlePhase::SinglePhase].at("pressure")
           : 0.;
 
   particle_data->coord_x = coordinates[0];
@@ -215,14 +216,14 @@ std::shared_ptr<void> mpm::Particle<Tdim>::pod() {
   // Write state variables
   if (this->material() != nullptr) {
     particle_data->nstate_vars =
-        state_variables_[mpm::ParticlePhase::Solid].size();
-    if (state_variables_[mpm::ParticlePhase::Solid].size() > 20)
+        state_variables_[mpm::ParticlePhase::SinglePhase].size();
+    if (state_variables_[mpm::ParticlePhase::SinglePhase].size() > 20)
       throw std::runtime_error("# of state variables cannot be more than 20");
     unsigned i = 0;
     auto state_variables = (this->material())->state_variables();
     for (const auto& state_var : state_variables) {
       particle_data->svars[i] =
-          state_variables_[mpm::ParticlePhase::Solid].at(state_var);
+          state_variables_[mpm::ParticlePhase::SinglePhase].at(state_var);
       ++i;
     }
   }
@@ -535,9 +536,8 @@ void mpm::Particle<Tdim>::map_mass_momentum_to_nodes() noexcept {
 
   // Map mass and momentum to nodes
   for (unsigned i = 0; i < nodes_.size(); ++i) {
-    nodes_[i]->update_mass(true, mpm::ParticlePhase::Solid,
-                           mass_ * shapefn_[i]);
-    nodes_[i]->update_momentum(true, mpm::ParticlePhase::Solid,
+    nodes_[i]->update_mass(true, this->phase(), mass_ * shapefn_[i]);
+    nodes_[i]->update_momentum(true, this->phase(),
                                mass_ * shapefn_[i] * velocity_);
   }
 }
@@ -655,7 +655,7 @@ inline Eigen::Matrix<double, 6, 1> mpm::Particle<3>::compute_strain_rate(
 template <unsigned Tdim>
 void mpm::Particle<Tdim>::compute_strain(double dt) noexcept {
   // Assign strain rate
-  strain_rate_ = this->compute_strain_rate(dn_dx_, mpm::ParticlePhase::Solid);
+  strain_rate_ = this->compute_strain_rate(dn_dx_, this->phase());
   // Update dstrain
   dstrain_ = strain_rate_ * dt;
   // Update strain
@@ -664,7 +664,7 @@ void mpm::Particle<Tdim>::compute_strain(double dt) noexcept {
   // Compute at centroid
   // Strain rate for reduced integration
   const Eigen::Matrix<double, 6, 1> strain_rate_centroid =
-      this->compute_strain_rate(dn_dx_centroid_, mpm::ParticlePhase::Solid);
+      this->compute_strain_rate(dn_dx_centroid_, this->phase());
 
   // Assign volumetric strain at centroid
   dvolumetric_strain_ = dt * strain_rate_centroid.head(Tdim).sum();
@@ -680,7 +680,7 @@ void mpm::Particle<Tdim>::compute_stress() noexcept {
   this->stress_ =
       (this->material())
           ->compute_stress(stress_, dstrain_, this,
-                           &state_variables_[mpm::ParticlePhase::Solid]);
+                           &state_variables_[mpm::ParticlePhase::SinglePhase]);
 }
 
 //! Map body force
@@ -688,7 +688,7 @@ template <unsigned Tdim>
 void mpm::Particle<Tdim>::map_body_force(const VectorDim& pgravity) noexcept {
   // Compute nodal body forces
   for (unsigned i = 0; i < nodes_.size(); ++i)
-    nodes_[i]->update_external_force(true, mpm::ParticlePhase::Solid,
+    nodes_[i]->update_external_force(true, this->phase(),
                                      (pgravity * mass_ * shapefn_(i)));
 }
 
@@ -701,7 +701,7 @@ inline void mpm::Particle<1>::map_internal_force() noexcept {
     Eigen::Matrix<double, 1, 1> force;
     force[0] = -1. * dn_dx_(i, 0) * volume_ * stress_[0];
 
-    nodes_[i]->update_internal_force(true, mpm::ParticlePhase::Solid, force);
+    nodes_[i]->update_internal_force(true, this->phase(), force);
   }
 }
 
@@ -717,7 +717,7 @@ inline void mpm::Particle<2>::map_internal_force() noexcept {
 
     force *= -1. * this->volume_;
 
-    nodes_[i]->update_internal_force(true, mpm::ParticlePhase::Solid, force);
+    nodes_[i]->update_internal_force(true, this->phase(), force);
   }
 }
 
@@ -739,7 +739,7 @@ inline void mpm::Particle<3>::map_internal_force() noexcept {
 
     force *= -1. * this->volume_;
 
-    nodes_[i]->update_internal_force(true, mpm::ParticlePhase::Solid, force);
+    nodes_[i]->update_internal_force(true, this->phase(), force);
   }
 }
 
@@ -779,7 +779,7 @@ void mpm::Particle<Tdim>::map_traction_force() noexcept {
   if (this->set_traction_) {
     // Map particle traction forces to nodes
     for (unsigned i = 0; i < nodes_.size(); ++i)
-      nodes_[i]->update_external_force(true, mpm::ParticlePhase::Solid,
+      nodes_[i]->update_external_force(true, this->phase(),
                                        (shapefn_[i] * traction_));
   }
 }
@@ -795,8 +795,7 @@ void mpm::Particle<Tdim>::compute_updated_position(
       Eigen::Matrix<double, Tdim, 1>::Zero();
 
   for (unsigned i = 0; i < nodes_.size(); ++i)
-    nodal_velocity +=
-        shapefn_[i] * nodes_[i]->velocity(mpm::ParticlePhase::Solid);
+    nodal_velocity += shapefn_[i] * nodes_[i]->velocity(this->phase());
 
   // Acceleration update
   if (!velocity_update) {
@@ -805,7 +804,7 @@ void mpm::Particle<Tdim>::compute_updated_position(
         Eigen::Matrix<double, Tdim, 1>::Zero();
     for (unsigned i = 0; i < nodes_.size(); ++i)
       nodal_acceleration +=
-          shapefn_[i] * nodes_[i]->acceleration(mpm::ParticlePhase::Solid);
+          shapefn_[i] * nodes_[i]->acceleration(this->phase());
 
     // Update particle velocity from interpolated nodal acceleration
     this->velocity_ += nodal_acceleration * dt;
@@ -925,8 +924,7 @@ bool mpm::Particle<Tdim>::compute_free_surface_by_density(
     // Get interpolated nodal density
     double nodal_mass_density = 0;
     for (unsigned i = 0; i < nodes_.size(); ++i)
-      nodal_mass_density +=
-          shapefn_[i] * nodes_[i]->density(mpm::ParticlePhase::Solid);
+      nodal_mass_density += shapefn_[i] * nodes_[i]->density(this->phase());
 
     // Compare smoothen density to actual particle mass density
     if ((nodal_mass_density / mass_density_) <= density_ratio_tolerance)
@@ -987,7 +985,8 @@ int mpm::Particle<Tdim>::compute_pack_size() const {
   total_size += partial_size;
 
   // nstate variables
-  unsigned nstate_vars = state_variables_[mpm::ParticlePhase::Solid].size();
+  unsigned nstate_vars =
+      state_variables_[mpm::ParticlePhase::SinglePhase].size();
   MPI_Pack_size(1, MPI_UNSIGNED, MPI_COMM_WORLD, &partial_size);
   total_size += partial_size;
 
@@ -1018,8 +1017,8 @@ std::vector<uint8_t> mpm::Particle<Tdim>::serialize() {
   unsigned nmaterials = material_id_.size();
   MPI_Pack(&nmaterials, 1, MPI_UNSIGNED, data_ptr, data.size(), &position,
            MPI_COMM_WORLD);
-  MPI_Pack(&material_id_[mpm::ParticlePhase::Solid], 1, MPI_UNSIGNED, data_ptr,
-           data.size(), &position, MPI_COMM_WORLD);
+  MPI_Pack(&material_id_[mpm::ParticlePhase::SinglePhase], 1, MPI_UNSIGNED,
+           data_ptr, data.size(), &position, MPI_COMM_WORLD);
 
   // ID
   MPI_Pack(&id_, 1, MPI_UNSIGNED_LONG_LONG, data_ptr, data.size(), &position,
@@ -1032,9 +1031,9 @@ std::vector<uint8_t> mpm::Particle<Tdim>::serialize() {
            MPI_COMM_WORLD);
   // Pressure
   double pressure =
-      (state_variables_[mpm::ParticlePhase::Solid].find("pressure") !=
-       state_variables_[mpm::ParticlePhase::Solid].end())
-          ? state_variables_[mpm::ParticlePhase::Solid].at("pressure")
+      (state_variables_[mpm::ParticlePhase::SinglePhase].find("pressure") !=
+       state_variables_[mpm::ParticlePhase::SinglePhase].end())
+          ? state_variables_[mpm::ParticlePhase::SinglePhase].at("pressure")
           : 0.;
   MPI_Pack(&pressure, 1, MPI_DOUBLE, data_ptr, data.size(), &position,
            MPI_COMM_WORLD);
@@ -1071,18 +1070,19 @@ std::vector<uint8_t> mpm::Particle<Tdim>::serialize() {
            MPI_COMM_WORLD);
 
   // nstate variables
-  unsigned nstate_vars = state_variables_[mpm::ParticlePhase::Solid].size();
+  unsigned nstate_vars =
+      state_variables_[mpm::ParticlePhase::SinglePhase].size();
   MPI_Pack(&nstate_vars, 1, MPI_UNSIGNED, data_ptr, data.size(), &position,
            MPI_COMM_WORLD);
 
   // state variables
-  if (this->material(mpm::ParticlePhase::Solid) != nullptr) {
+  if (this->material(mpm::ParticlePhase::SinglePhase) != nullptr) {
     std::vector<double> svars;
     auto state_variables =
-        (this->material(mpm::ParticlePhase::Solid))->state_variables();
+        (this->material(mpm::ParticlePhase::SinglePhase))->state_variables();
     for (const auto& state_var : state_variables)
       svars.emplace_back(
-          state_variables_[mpm::ParticlePhase::Solid].at(state_var));
+          state_variables_[mpm::ParticlePhase::SinglePhase].at(state_var));
 
     // Write state vars
     MPI_Pack(&svars[0], nstate_vars, MPI_DOUBLE, data_ptr, data.size(),
@@ -1111,7 +1111,7 @@ void mpm::Particle<Tdim>::deserialize(
   MPI_Unpack(data_ptr, data.size(), &position, &nmaterials, 1, MPI_UNSIGNED,
              MPI_COMM_WORLD);
   MPI_Unpack(data_ptr, data.size(), &position,
-             &material_id_[mpm::ParticlePhase::Solid], 1, MPI_UNSIGNED,
+             &material_id_[mpm::ParticlePhase::SinglePhase], 1, MPI_UNSIGNED,
              MPI_COMM_WORLD);
 
   assert(nmaterials == materials.size());
@@ -1162,10 +1162,10 @@ void mpm::Particle<Tdim>::deserialize(
              MPI_COMM_WORLD);
 
   // Assign materials
-  assert(material_id_[mpm::ParticlePhase::Solid] ==
-         materials.at(mpm::ParticlePhase::Solid)->id());
+  assert(material_id_[mpm::ParticlePhase::SinglePhase] ==
+         materials.at(mpm::ParticlePhase::SinglePhase)->id());
   bool assign_mat =
-      this->assign_material(materials.at(mpm::ParticlePhase::Solid));
+      this->assign_material(materials.at(mpm::ParticlePhase::SinglePhase));
   if (!assign_mat)
     throw std::runtime_error(
         "deserialize particle(): Material assignment failed");
@@ -1189,7 +1189,7 @@ void mpm::Particle<Tdim>::deserialize(
     unsigned i = 0;
     auto state_variables = (this->material())->state_variables();
     for (const auto& state_var : state_variables) {
-      this->state_variables_[mpm::ParticlePhase::Solid].at(state_var) =
+      this->state_variables_[mpm::ParticlePhase::SinglePhase].at(state_var) =
           svars[i];
       ++i;
     }
