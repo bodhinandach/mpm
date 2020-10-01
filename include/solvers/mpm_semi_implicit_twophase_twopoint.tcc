@@ -61,6 +61,22 @@ bool mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::solve() {
     throw std::runtime_error("Initialisation of matrix failed");
   }
 
+  // Assign porosity to the solid particles
+  mesh_->iterate_over_particles_predicate(
+      std::bind(&mpm::ParticleBase<Tdim>::assign_porosity,
+                std::placeholders::_1),
+      std::bind(&mpm::ParticleBase<Tdim>::phase_status, std::placeholders::_1,
+                solid));
+
+  // Assign permeability to the solid particles
+  mesh_->iterate_over_particles_predicate(
+      std::bind(&mpm::ParticleBase<Tdim>::assign_permeability,
+                std::placeholders::_1),
+      std::bind(&mpm::ParticleBase<Tdim>::phase_status, std::placeholders::_1,
+                solid));
+
+  // Map porosity from solid to fluid particles
+
   // Compute mass for each phase considering phase-wise volume fraction
   mesh_->iterate_over_particles(
       std::bind(&mpm::ParticleBase<Tdim>::compute_mass, std::placeholders::_1));

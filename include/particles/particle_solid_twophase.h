@@ -40,6 +40,22 @@ class TwoPhaseSolidParticle : public mpm::Particle<Tdim> {
     return (Tdim == 2) ? "P2DSOLID2PHASE" : "P3DSOLID2PHASE";
   }
 
+  //! Return phase boolean
+  //! \retval phase boolean associated with phase index
+  bool phase_status(unsigned phase) const override {
+    return (phase == mpm::ParticlePhase::Solid) ? true : false;
+  };
+
+  //! Compute solid mass
+  void compute_mass() noexcept override;
+
+  //! Assign particle permeability
+  //! \retval status Assignment status
+  bool assign_permeability() override;
+
+  //! Assign porosity
+  bool assign_porosity() override;
+
  private:
   //! Cell
   using ParticleBase<Tdim>::cell_;
@@ -63,8 +79,14 @@ class TwoPhaseSolidParticle : public mpm::Particle<Tdim> {
   using Particle<Tdim>::mass_;
   //! Particle total volume
   using Particle<Tdim>::volume_;
+
   //! Projection parameter for semi-implicit update
   double projection_param_{0.0};
+  //! Material point porosity (volume of voids / total volume)
+  double porosity_{0.0};
+  //! Permeability parameter c1 (k = k_p * c1)
+  VectorDim permeability_;
+
   //! Logger
   std::unique_ptr<spdlog::logger> console_;
 };  // TwoPhaseSolidParticle class

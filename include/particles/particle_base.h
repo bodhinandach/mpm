@@ -493,6 +493,16 @@ class ParticleBase {
   };
   //----------------------------------------------------------------------------
 
+  //! TwoPhase TwoPoint functions-----------------------------------------------
+  //! Return phase boolean
+  //! \retval phase boolean associated with phase index
+  virtual bool phase_status(unsigned phase) const {
+    throw std::runtime_error(
+        "Calling the base class function (phase_status) in "
+        "ParticleBase:: illegal operation!");
+    return 0;
+  };
+
  protected:
   //! particleBase id
   Index id_{std::numeric_limits<Index>::max()};

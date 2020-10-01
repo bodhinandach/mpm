@@ -41,6 +41,15 @@ class TwoPhaseFluidParticle : public mpm::FluidParticle<Tdim> {
     return (Tdim == 2) ? "P2DFLUID2PHASE" : "P3DFLUID2PHASE";
   }
 
+  //! Return phase boolean
+  //! \retval phase boolean associated with phase index
+  bool phase_status(unsigned phase) const override {
+    return (phase == mpm::ParticlePhase::Liquid) ? true : false;
+  };
+
+  //! Compute fluid mass
+  void compute_mass() noexcept override;
+
  private:
   //! Cell
   using ParticleBase<Tdim>::cell_;
@@ -66,6 +75,9 @@ class TwoPhaseFluidParticle : public mpm::FluidParticle<Tdim> {
   using Particle<Tdim>::volume_;
   //! Projection parameter for semi-implicit update
   using FluidParticle<Tdim>::projection_param_;
+
+  //! Material point porosity (volume of voids / total volume)
+  double porosity_{1.0};
   //! Logger
   std::unique_ptr<spdlog::logger> console_;
 };  // TwoPhaseFluidParticle class
