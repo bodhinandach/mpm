@@ -104,6 +104,25 @@ class NodeBase {
   //! Return volume at a given node for a given phase
   virtual double volume(unsigned phase) const = 0;
 
+  //! Update gauss volume at the nodes from gauss quadrature
+  //! \param[in] update A boolean to update (true) or assign (false)
+  //! \param[in] volume Volume from gauss quadrature
+  virtual void update_gauss_volume(bool update, double volume) noexcept = 0;
+
+  //! Return gauss volume at a given node
+  virtual double gauss_volume() const = 0;
+
+  //! Update phase volume fraction at the nodes from particle
+  //! \param[in] update A boolean to update (true) or assign (false)
+  //! \param[in] phase Index corresponding to the phase
+  //! \param[in] vol_fraction Volume fraction from the particles in a cell
+  virtual void update_volume_fraction(bool update, unsigned phase,
+                                      double vol_fraction) noexcept = 0;
+
+  //! Return volume fraction at a given node for a given phase
+  //! \param[in] phase Index corresponding to the phase
+  virtual double volume_fraction(unsigned phase) const = 0;
+
   //! Assign concentrated force to the node
   //! \param[in] direction Index corresponding to the direction of traction
   //! \param[in] traction Nodal concentrated force in specified direction
@@ -295,6 +314,9 @@ class NodeBase {
 
   //! Compute nodal density
   virtual void compute_density() = 0;
+
+  //! Compute nodal porosity
+  virtual void compute_porosity() = 0;
 
   //! Assign free surface
   virtual void assign_free_surface(bool free_surface) = 0;

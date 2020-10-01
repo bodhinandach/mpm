@@ -130,3 +130,24 @@ bool mpm::Node<Tdim, Tdof, Tnphases>::
   }
   return status;
 }
+
+//! Update volume fraction at the nodes from particle
+template <unsigned Tdim, unsigned Tdof, unsigned Tnphases>
+void mpm::Node<Tdim, Tdof, Tnphases>::update_volume_fraction(
+    bool update, unsigned phase, double volume_fraction) noexcept {
+  // Decide to update or assign
+  const double factor = (update == true) ? 1. : 0.;
+
+  // Update/assign volume
+  node_mutex_.lock();
+  volume_fraction_(phase) = volume_fraction_(phase) * factor + volume_fraction;
+  node_mutex_.unlock();
+}
+
+//! Compute nodal porosity
+template <unsigned Tdim, unsigned Tdof, unsigned Tnphases>
+void mpm::Node<Tdim, Tdof, Tnphases>::compute_porosity() {
+  //! Porosity = 1. - packing fraction
+  volume_fraction_(mpm::NodePhase::nLiquid) =
+      1.0 - volume_fraction_(mpm::NodePhase::nSolid);
+}

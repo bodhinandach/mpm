@@ -53,12 +53,19 @@ class TwoPhaseSolidParticle : public mpm::Particle<Tdim> {
   //! Compute solid mass
   void compute_mass() noexcept override;
 
+  //! Assign porosity
+  bool assign_porosity() override;
+
+  //! Update porosity
+  //! \param[in] dt Analysis time step
+  void update_porosity(double dt) override;
+
   //! Assign particle permeability
   //! \retval status Assignment status
   bool assign_permeability() override;
 
-  //! Assign porosity
-  bool assign_porosity() override;
+  //! Map particle volume fraction to nodes
+  void map_volume_fraction_to_nodes() override;
 
  private:
   //! Cell

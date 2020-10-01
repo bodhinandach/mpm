@@ -281,6 +281,10 @@ class Cell {
   //! \param[in] phase to map volume
   void map_cell_volume_to_nodes(unsigned phase);
 
+  //! Map gauss quadrature volume to the nodes
+  //! \param[in] phase to map volume
+  void map_cell_gauss_volume_to_nodes();
+
  private:
   //! Approximately check if a point is in a cell
   //! \param[in] point Coordinates of point

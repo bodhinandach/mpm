@@ -32,14 +32,17 @@ void mpm::Node<Tdim, Tdof, Tnphases>::initialise() noexcept {
   velocity_.setZero();
   momentum_.setZero();
   acceleration_.setZero();
+  status_ = false;
+  material_ids_.clear();
+  // Specific variables for semi implicit solver
   free_surface_ = false;
   pressure_increment_ = 0.;
   correction_force_.setZero();
-  status_ = false;
   solving_status_ = false;
-  material_ids_.clear();
   // Specific variables for two phase
   drag_force_coefficient_.setZero();
+  gauss_volume_ = 0.;
+  volume_fraction_.setZero();
 }
 
 //! Initialise shared pointer to nodal properties pool
@@ -75,6 +78,19 @@ void mpm::Node<Tdim, Tdof, Tnphases>::update_volume(bool update, unsigned phase,
   // Update/assign volume
   node_mutex_.lock();
   volume_(phase) = volume_(phase) * factor + volume;
+  node_mutex_.unlock();
+}
+
+//! Update gauss volume at the nodes from gauss point
+template <unsigned Tdim, unsigned Tdof, unsigned Tnphases>
+void mpm::Node<Tdim, Tdof, Tnphases>::update_gauss_volume(
+    bool update, double volume) noexcept {
+  // Decide to update or assign
+  const double factor = (update == true) ? 1. : 0.;
+
+  // Update/assign volume
+  node_mutex_.lock();
+  gauss_volume_ = gauss_volume_ * factor + volume;
   node_mutex_.unlock();
 }
 

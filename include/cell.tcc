@@ -948,3 +948,34 @@ void mpm::Cell<Tdim>::map_cell_volume_to_nodes(unsigned phase) {
     }
   }
 }
+
+//! Compute cell volume by gauss weight
+template <unsigned Tdim>
+void mpm::Cell<Tdim>::map_cell_gauss_volume_to_nodes() {
+  if (this->status()) {
+    // Assign a default quadrature of 2
+    if (this->quadrature_ == nullptr) this->assign_quadrature(2);
+
+    // Compute gauss quadrature position and weight
+    const auto quadratures = quadrature_->quadratures();
+    const auto g_weights = quadrature_->weights();
+
+    // Zeros
+    const Eigen::Matrix<double, Tdim, 1> zeros =
+        Eigen::Matrix<double, Tdim, 1>::Zero();
+
+    // Get local coordinates of gauss points and transform to global
+    for (unsigned i = 0; i < quadratures.cols(); ++i) {
+      const auto lpoint = quadratures.col(i);
+      const double weight = g_weights[i];
+      const double jacobian =
+          (element_->jacobian(lpoint, nodal_coordinates_, zeros, zeros))
+              .determinant();
+      const auto shapefn = element_->shapefn(lpoint, zeros, zeros);
+
+      for (unsigned j = 0; j < nodes_.size(); ++j) {
+        nodes_[j]->update_gauss_volume(true, shapefn[j] * weight * jacobian);
+      }
+    }
+  }
+}

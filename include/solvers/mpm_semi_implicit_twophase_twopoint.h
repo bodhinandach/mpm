@@ -44,6 +44,12 @@ class MPMSemiImplicitTwoPhaseTwoPoint : public MPMBase<Tdim> {
   //! Compute corrected velocity
   bool compute_correction_force();
 
+  //! Compute nodal gauss volume
+  void compute_nodes_gauss_volume();
+
+  //! Compute fluid particle porosity
+  void compute_fluid_particle_porosity();
+
   //! Class private variables
  private:
   // Generate a unique id for the analysis

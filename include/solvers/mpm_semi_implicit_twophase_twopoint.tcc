@@ -75,7 +75,11 @@ bool mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::solve() {
       std::bind(&mpm::ParticleBase<Tdim>::phase_status, std::placeholders::_1,
                 solid));
 
+  // Compute nodal volume from gauss quadrature
+  this->compute_nodes_gauss_volume();
+
   // Map porosity from solid to fluid particles
+  this->compute_fluid_particle_porosity();
 
   // Compute mass for each phase considering phase-wise volume fraction
   mesh_->iterate_over_particles(
@@ -472,4 +476,72 @@ bool mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::compute_correction_force() {
     status = false;
   }
   return status;
+}
+
+//! Compute gauss volume in node
+template <unsigned Tdim>
+void mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::compute_nodes_gauss_volume() {
+  int mpi_size = 1;
+#ifdef USE_MPI
+  // Get number of MPI ranks
+  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+#endif
+
+  //! Compute nodal volume from gauss points
+  mesh_->iterate_over_cells(std::bind(
+      &mpm::Cell<Tdim>::map_cell_gauss_volume_to_nodes, std::placeholders::_1));
+
+#ifdef USE_MPI
+  // Run if there is more than a single MPI task
+  if (mpi_size > 1) {
+    // MPI all reduce nodal volume
+    mesh_->template nodal_halo_exchange<double, 1>(
+        std::bind(&mpm::NodeBase<Tdim>::gauss_volume, std::placeholders::_1),
+        std::bind(&mpm::NodeBase<Tdim>::update_gauss_volume,
+                  std::placeholders::_1, false, std::placeholders::_2));
+  }
+#endif
+}
+
+//! Compute correction force
+template <unsigned Tdim>
+void mpm::MPMSemiImplicitTwoPhaseTwoPoint<
+    Tdim>::compute_fluid_particle_porosity() {
+  int mpi_size = 1;
+#ifdef USE_MPI
+  // Get number of MPI ranks
+  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+#endif
+
+  //! Map solid volume fraction from solid particle to the nodes
+  mesh_->iterate_over_particles_predicate(
+      std::bind(&mpm::ParticleBase<Tdim>::map_volume_fraction_to_nodes,
+                std::placeholders::_1),
+      std::bind(&mpm::ParticleBase<Tdim>::phase_status, std::placeholders::_1,
+                mpm::ParticlePhase::Solid));
+
+#ifdef USE_MPI
+  // Run if there is more than a single MPI task
+  if (mpi_size > 1) {
+    // MPI all reduce nodal mass
+    mesh_->template nodal_halo_exchange<double, 1>(
+        std::bind(&mpm::NodeBase<Tdim>::volume_fraction, std::placeholders::_1,
+                  mpm::ParticlePhase::Solid),
+        std::bind(&mpm::NodeBase<Tdim>::update_volume_fraction,
+                  std::placeholders::_1, false, mpm::ParticlePhase::Solid,
+                  std::placeholders::_2));
+  }
+#endif
+
+  //! Compute porosity in the node
+  mesh_->iterate_over_nodes_predicate(
+      std::bind(&mpm::NodeBase<Tdim>::compute_porosity, std::placeholders::_1),
+      std::bind(&mpm::NodeBase<Tdim>::status, std::placeholders::_1));
+
+  //! Interpolate fluid porosity from the nodal porosity
+  mesh_->iterate_over_particles_predicate(
+      std::bind(&mpm::ParticleBase<Tdim>::assign_porosity,
+                std::placeholders::_1),
+      std::bind(&mpm::ParticleBase<Tdim>::phase_status, std::placeholders::_1,
+                mpm::ParticlePhase::Liquid));
 }

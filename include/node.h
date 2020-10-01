@@ -93,6 +93,27 @@ class Node : public NodeBase<Tdim> {
   //! \param[in] phase Index corresponding to the phase
   double volume(unsigned phase) const override { return volume_(phase); }
 
+  //! Update gauss volume at the nodes from gauss quadrature
+  //! \param[in] update A boolean to update (true) or assign (false)
+  //! \param[in] volume Volume from gauss quadrature
+  void update_gauss_volume(bool update, double volume) noexcept override;
+
+  //! Return gauss volume at a given node
+  double gauss_volume() const override { return gauss_volume_; }
+
+  //! Update phase volume fraction at the nodes from particle
+  //! \param[in] update A boolean to update (true) or assign (false)
+  //! \param[in] phase Index corresponding to the phase
+  //! \param[in] vol_fraction Volume fraction from the particles in a cell
+  void update_volume_fraction(bool update, unsigned phase,
+                              double vol_fraction) noexcept override;
+
+  //! Return volume fraction at a given node for a given phase
+  //! \param[in] phase Index corresponding to the phase
+  double volume_fraction(unsigned phase) const override {
+    return volume_fraction_(phase);
+  }
+
   //! Assign concentrated force to the node
   //! \param[in] phase Index corresponding to the phase
   //! \param[in] direction Index corresponding to the direction of traction
@@ -279,6 +300,9 @@ class Node : public NodeBase<Tdim> {
 
   //! Compute nodal density
   void compute_density() override;
+
+  //! Compute nodal porosity
+  void compute_porosity() override;
 
   //! Compute nodal correction force term
   bool compute_nodal_correction_force(
@@ -478,6 +502,10 @@ class Node : public NodeBase<Tdim> {
   bool free_surface_{false};
   //! Signed distance
   double signed_distance_;
+  //! Volume fraction
+  Eigen::Matrix<double, 1, Tnphases> volume_fraction_;
+  //! Gauss volume (volume of the element computed from gauss point)
+  double gauss_volume_;
 };  // Node class
 }  // namespace mpm
 

@@ -44,6 +44,37 @@ bool mpm::TwoPhaseSolidParticle<Tdim>::assign_porosity() {
   return status;
 }
 
+// Update material point porosity
+template <unsigned Tdim>
+void mpm::TwoPhaseSolidParticle<Tdim>::update_porosity(double dt) {
+  // Update particle porosity
+  const double porosity =
+      1 - (1 - this->porosity_) / (1 + dt * strain_rate_.head(Tdim).sum());
+  // Check if the value is valid
+  if (porosity < 0.)
+    this->porosity_ = 1.E-5;
+  else if (porosity > 1.)
+    this->porosity_ = 1 - 1.E-5;
+  else
+    this->porosity_ = porosity;
+}
+
+//! Map particle volume fraction to nodes
+template <unsigned Tdim>
+void mpm::TwoPhaseSolidParticle<Tdim>::map_volume_fraction_to_nodes() {
+  // Map porosity to nodes
+  const double tolerance = std::numeric_limits<double>::epsilon();
+  const double solid_volume = volume_ * (1. - porosity_);
+  for (unsigned i = 0; i < nodes_.size(); ++i) {
+    if (nodes_[i]->gauss_volume() > tolerance)
+      nodes_[i]->update_volume_fraction(
+          true, this->phase(),
+          solid_volume / nodes_[i]->gauss_volume() * shapefn_[i]);
+    else
+      throw std::runtime_error("Nodal gauss weight is invalid or unassigned");
+  }
+};
+
 //! Assign particle permeability
 template <unsigned Tdim>
 bool mpm::TwoPhaseSolidParticle<Tdim>::assign_permeability() {

@@ -508,6 +508,13 @@ class ParticleBase {
     return 0;
   };
 
+  //! Map particle volume fraction to nodes
+  virtual void map_volume_fraction_to_nodes() {
+    throw std::runtime_error(
+        "Calling the base class function (map_volume_fraction_to_nodes) in "
+        "ParticleBase:: illegal operation!");
+  };
+
  protected:
   //! particleBase id
   Index id_{std::numeric_limits<Index>::max()};

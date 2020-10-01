@@ -22,3 +22,27 @@ void mpm::TwoPhaseFluidParticle<Tdim>::compute_mass() noexcept {
       (this->porosity_);
   this->mass_ = volume_ * mass_density_;
 }
+
+// Assign porosity to the particle
+template <unsigned Tdim>
+bool mpm::TwoPhaseFluidParticle<Tdim>::assign_porosity() {
+  // Assert
+  assert(cell_ != nullptr);
+
+  bool status = false;
+  double porosity = 0.;
+  // Update particle pressure to interpolated nodal pressure
+  for (unsigned i = 0; i < this->nodes_.size(); ++i)
+    porosity += shapefn_[i] * nodes_[i]->volume_fraction(this->phase());
+
+  // Check if the value is valid
+  if (porosity < 0.)
+    this->porosity_ = 1.E-5;
+  else if (porosity > 1.)
+    this->porosity_ = 1 - 1.E-5;
+  else
+    this->porosity_ = porosity;
+
+  status = true;
+  return status;
+}

@@ -54,6 +54,12 @@ class TwoPhaseFluidParticle : public mpm::FluidParticle<Tdim> {
   //! Compute fluid mass
   void compute_mass() noexcept override;
 
+  //! Assign porosity at fluid particle
+  //! NOTE: This function is different to the one available in the solid
+  //! particles. Here, the porosity is not obtained from the particle variable,
+  //! but from the background nodes.
+  bool assign_porosity() override;
+
  private:
   //! Cell
   using ParticleBase<Tdim>::cell_;
