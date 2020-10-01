@@ -68,11 +68,10 @@ class FluidParticle : public mpm::Particle<Tdim> {
     return (Tdim == 2) ? "P2DFLUID" : "P3DFLUID";
   }
 
- private:
+ protected:
   //! Compute turbulent stress
   virtual Eigen::Matrix<double, 6, 1> compute_turbulent_stress();
 
- private:
   //! Cell
   using ParticleBase<Tdim>::cell_;
   //! Nodes

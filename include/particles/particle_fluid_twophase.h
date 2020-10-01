@@ -1,5 +1,5 @@
-#ifndef MPM_SOLID_PARTICLE_H_
-#define MPM_SOLID_PARTICLE_H_
+#ifndef MPM_TWOPHASE_FLUID_PARTICLE_H_
+#define MPM_TWOPHASE_FLUID_PARTICLE_H_
 
 #include <array>
 #include <limits>
@@ -9,14 +9,15 @@
 
 #include "logger.h"
 #include "particle.h"
+#include "particle_fluid.h"
 
 namespace mpm {
 
-//! Solid Particle class
+//! Solid Particle class for twophase-twopoint solver
 //! \brief Class with function specific to solid particles
 //! \tparam Tdim Dimension
 template <unsigned Tdim>
-class SolidParticle : public mpm::Particle<Tdim> {
+class TwoPhaseFluidParticle : public mpm::FluidParticle<Tdim> {
  public:
   //! Define a vector of size dimension
   using VectorDim = Eigen::Matrix<double, Tdim, 1>;
@@ -24,20 +25,20 @@ class SolidParticle : public mpm::Particle<Tdim> {
   //! Construct a particle with id and coordinates
   //! \param[in] id Particle id
   //! \param[in] coord Coordinates of the particles
-  SolidParticle(Index id, const VectorDim& coord);
+  TwoPhaseFluidParticle(Index id, const VectorDim& coord);
 
   //! Destructor
-  ~SolidParticle() override{};
+  ~TwoPhaseFluidParticle() override{};
 
   //! Delete copy constructor
-  SolidParticle(const SolidParticle<Tdim>&) = delete;
+  TwoPhaseFluidParticle(const TwoPhaseFluidParticle<Tdim>&) = delete;
 
   //! Delete assignment operator
-  SolidParticle& operator=(const SolidParticle<Tdim>&) = delete;
+  TwoPhaseFluidParticle& operator=(const TwoPhaseFluidParticle<Tdim>&) = delete;
 
   //! Type of particle
   std::string type() const override {
-    return (Tdim == 2) ? "P2DSOLID" : "P3DSOLID";
+    return (Tdim == 2) ? "P2DFLUID2PHASE" : "P3DFLUID2PHASE";
   }
 
  private:
@@ -64,12 +65,12 @@ class SolidParticle : public mpm::Particle<Tdim> {
   //! Particle total volume
   using Particle<Tdim>::volume_;
   //! Projection parameter for semi-implicit update
-  double projection_param_{0.0};
+  using FluidParticle<Tdim>::projection_param_;
   //! Logger
   std::unique_ptr<spdlog::logger> console_;
-};  // SolidParticle class
+};  // TwoPhaseFluidParticle class
 }  // namespace mpm
 
-#include "solid_particle.tcc"
+#include "particle_fluid_twophase.tcc"
 
-#endif  // MPM_SOLID_PARTICLE_H_
+#endif  // MPM_TWOPHASE_FLUID_PARTICLE_H_
