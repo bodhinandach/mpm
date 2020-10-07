@@ -91,6 +91,7 @@ bool mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::solve() {
                 std::placeholders::_1, beta_));
 
   // Check point resume
+  // TODO: ADD POROSITY IN RESUME FOR SOLID
   if (resume) this->checkpoint_resume();
 
   // Domain decompose
@@ -139,12 +140,25 @@ bool mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::solve() {
 #ifdef USE_MPI
     // Run if there is more than a single MPI task
     if (mpi_size > 1) {
-      // MPI all reduce nodal mass
+      // MPI all reduce nodal mass for solid phase
+      mesh_->template nodal_halo_exchange<double, 1>(
+          std::bind(&mpm::NodeBase<Tdim>::mass, std::placeholders::_1, solid),
+          std::bind(&mpm::NodeBase<Tdim>::update_mass, std::placeholders::_1,
+                    false, solid, std::placeholders::_2));
+      // MPI all reduce nodal momentum for solid phase
+      mesh_->template nodal_halo_exchange<Eigen::Matrix<double, Tdim, 1>, Tdim>(
+          std::bind(&mpm::NodeBase<Tdim>::momentum, std::placeholders::_1,
+                    solid),
+          std::bind(&mpm::NodeBase<Tdim>::update_momentum,
+                    std::placeholders::_1, false, solid,
+                    std::placeholders::_2));
+
+      // MPI all reduce nodal mass for liquid phase
       mesh_->template nodal_halo_exchange<double, 1>(
           std::bind(&mpm::NodeBase<Tdim>::mass, std::placeholders::_1, liquid),
           std::bind(&mpm::NodeBase<Tdim>::update_mass, std::placeholders::_1,
                     false, liquid, std::placeholders::_2));
-      // MPI all reduce nodal momentum
+      // MPI all reduce nodal momentum for liquid phase
       mesh_->template nodal_halo_exchange<Eigen::Matrix<double, Tdim, 1>, Tdim>(
           std::bind(&mpm::NodeBase<Tdim>::momentum, std::placeholders::_1,
                     liquid),
@@ -155,6 +169,7 @@ bool mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::solve() {
 #endif
 
     // Compute free surface cells, nodes, and particles
+    // TODO: NEED TO CONSIDER POROSITY EFFECT
     mesh_->compute_free_surface(free_surface_detection_, volume_tolerance_);
 
     // Spawn a task for initializing pressure at free surface
@@ -181,9 +196,32 @@ bool mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::solve() {
     mesh_->iterate_over_particles(std::bind(
         &mpm::ParticleBase<Tdim>::compute_strain, std::placeholders::_1, dt_));
 
+    // Iterate over each particle to update solid skeleton volume
+    mesh_->iterate_over_particles_predicate(
+        std::bind(&mpm::ParticleBase<Tdim>::update_volume,
+                  std::placeholders::_1),
+        std::bind(&mpm::ParticleBase<Tdim>::phase_status, std::placeholders::_1,
+                  solid));
+
     // Iterate over each particle to compute shear (deviatoric) stress
     mesh_->iterate_over_particles(std::bind(
         &mpm::ParticleBase<Tdim>::compute_stress, std::placeholders::_1));
+
+    // Pressure smoothing if needed for the solid phase
+    if (pressure_smoothing_) this->pressure_smoothing(solid);
+
+    // Iterate over each particle to update porosity of the solid skeleton
+    mesh_->iterate_over_particles_predicate(
+        std::bind(&mpm::ParticleBase<Tdim>::update_porosity,
+                  std::placeholders::_1, dt_),
+        std::bind(&mpm::ParticleBase<Tdim>::phase_status, std::placeholders::_1,
+                  solid));
+
+    // Compute nodal volume from gauss quadrature
+    this->compute_nodes_gauss_volume();
+
+    // Map porosity from solid to fluid particles
+    this->compute_fluid_particle_porosity();
 
     // Spawn a task for external force
 #pragma omp parallel sections
@@ -207,32 +245,66 @@ bool mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::solve() {
             std::bind(&mpm::ParticleBase<Tdim>::map_internal_force,
                       std::placeholders::_1));
       }
+
+#pragma omp section
+      {
+        // Iterate over solid particles to compute nodal drag force coefficient
+        mesh_->iterate_over_particles_predicate(
+            std::bind(&mpm::ParticleBase<Tdim>::map_drag_force_coefficient,
+                      std::placeholders::_1),
+            std::bind(&mpm::ParticleBase<Tdim>::phase_status,
+                      std::placeholders::_1, solid));
+      }
     }  // Wait for tasks to finish
 
 #ifdef USE_MPI
     // Run if there is more than a single MPI task
     if (mpi_size > 1) {
-      // MPI all reduce external force
+      // MPI all reduce external force of mixture
+      mesh_->template nodal_halo_exchange<Eigen::Matrix<double, Tdim, 1>, Tdim>(
+          std::bind(&mpm::NodeBase<Tdim>::external_force, std::placeholders::_1,
+                    solid),
+          std::bind(&mpm::NodeBase<Tdim>::update_external_force,
+                    std::placeholders::_1, false, solid,
+                    std::placeholders::_2));
+      // MPI all reduce external force of pore fluid
       mesh_->template nodal_halo_exchange<Eigen::Matrix<double, Tdim, 1>, Tdim>(
           std::bind(&mpm::NodeBase<Tdim>::external_force, std::placeholders::_1,
                     liquid),
           std::bind(&mpm::NodeBase<Tdim>::update_external_force,
                     std::placeholders::_1, false, liquid,
                     std::placeholders::_2));
-      // MPI all reduce internal force
+
+      // MPI all reduce internal force of mixture
+      mesh_->template nodal_halo_exchange<Eigen::Matrix<double, Tdim, 1>, Tdim>(
+          std::bind(&mpm::NodeBase<Tdim>::internal_force, std::placeholders::_1,
+                    solid),
+          std::bind(&mpm::NodeBase<Tdim>::update_internal_force,
+                    std::placeholders::_1, false, solid,
+                    std::placeholders::_2));
+      // MPI all reduce internal force of pore liquid
       mesh_->template nodal_halo_exchange<Eigen::Matrix<double, Tdim, 1>, Tdim>(
           std::bind(&mpm::NodeBase<Tdim>::internal_force, std::placeholders::_1,
                     liquid),
           std::bind(&mpm::NodeBase<Tdim>::update_internal_force,
                     std::placeholders::_1, false, liquid,
                     std::placeholders::_2));
+
+      // MPI all reduce drag force
+      mesh_->template nodal_halo_exchange<Eigen::Matrix<double, Tdim, 1>, Tdim>(
+          std::bind(&mpm::NodeBase<Tdim>::drag_force_coefficient,
+                    std::placeholders::_1),
+          std::bind(&mpm::NodeBase<Tdim>::update_drag_force_coefficient,
+                    std::placeholders::_1, false, std::placeholders::_2));
     }
 #endif
 
-    // Compute intermediate velocity
+    // Compute intermediate velocity and acceleration for both phases
     mesh_->iterate_over_nodes_predicate(
-        std::bind(&mpm::NodeBase<Tdim>::compute_acceleration_velocity,
-                  std::placeholders::_1, liquid, this->dt_),
+        std::bind(
+            &mpm::NodeBase<Tdim>::
+                compute_acceleration_velocity_twophase_twopoint_prediction,
+            std::placeholders::_1, this->dt_),
         std::bind(&mpm::NodeBase<Tdim>::status, std::placeholders::_1));
 
     // Reinitialise system matrix to perform PPE

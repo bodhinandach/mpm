@@ -60,6 +60,9 @@ class TwoPhaseFluidParticle : public mpm::FluidParticle<Tdim> {
   //! but from the background nodes.
   bool assign_porosity() override;
 
+  //! Compute stress
+  void compute_stress() noexcept override;
+
  private:
   //! Cell
   using ParticleBase<Tdim>::cell_;

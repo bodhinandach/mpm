@@ -123,3 +123,59 @@ bool mpm::TwoPhaseSolidParticle<Tdim>::assign_permeability() {
   }
   return status;
 }
+
+//! Map drag force
+//! NOTE: This function assume linear darcy law
+template <unsigned Tdim>
+bool mpm::TwoPhaseSolidParticle<Tdim>::map_drag_force_coefficient() {
+  bool status = true;
+  try {
+    // Porosity parameter
+    const double k_p =
+        std::pow(this->porosity_, 3) / std::pow((1. - this->porosity_), 2);
+    // Initialise drag force coefficient
+    VectorDim drag_force_coefficient;
+    drag_force_coefficient.setZero();
+
+    // Check if permeability coefficient is valid
+    const double gravity = 9.81;
+    for (unsigned i = 0; i < Tdim; ++i) {
+      if (k_p > 0.)
+        drag_force_coefficient(i) = gravity / (k_p * permeability_(i));
+      else
+        throw std::runtime_error("Porosity coefficient is invalid");
+    }
+
+    // Map drag forces from particle to nodes
+    for (unsigned j = 0; j < nodes_.size(); ++j) {
+      const double gauss_volume = nodes_[j]->gauss_volume();
+      const double nodal_solid_mass =
+          nodes_[j]->mass(mpm::ParticlePhase::Solid);
+      const double nodal_liquid_mass =
+          nodes_[j]->mass(mpm::ParticlePhase::Liquid);
+      const double nodal_solid_volume_fraction =
+          nodes_[j]->volume_fraction(mpm::ParticlePhase::Solid);
+      const double nodal_liquid_volume_fraction =
+          nodes_[j]->volume_fraction(mpm::ParticlePhase::Liquid);
+
+      // Multiply nodal porosity square
+      drag_force_coefficient *=
+          nodal_liquid_volume_fraction * nodal_liquid_volume_fraction;
+
+      // Multiply nodal volume contribution
+      drag_force_coefficient *=
+          (gauss_volume *
+           (nodal_solid_mass / nodal_solid_volume_fraction /
+            this->material(mpm::ParticlePhase::Solid)
+                ->template property<double>(std::string("density"))) *
+           (nodal_liquid_mass / nodal_liquid_volume_fraction));
+
+      nodes_[j]->update_drag_force_coefficient(true, drag_force_coefficient);
+    }
+
+  } catch (std::exception& exception) {
+    console_->error("{} #{}: {}\n", __FILE__, __LINE__, exception.what());
+    status = false;
+  }
+  return status;
+}

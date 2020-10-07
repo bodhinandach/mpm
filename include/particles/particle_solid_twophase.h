@@ -50,6 +50,12 @@ class TwoPhaseSolidParticle : public mpm::Particle<Tdim> {
   //! \retval phase Nodal phase index
   unsigned phase() const override { return mpm::ParticlePhase::Solid; };
 
+  //! Assigning beta parameter to particle
+  //! \param[in] pressure parameter determining type of projection
+  void assign_projection_parameter(double parameter) override {
+    this->projection_param_ = parameter;
+  };
+
   //! Compute solid mass
   void compute_mass() noexcept override;
 
@@ -66,6 +72,9 @@ class TwoPhaseSolidParticle : public mpm::Particle<Tdim> {
 
   //! Map particle volume fraction to nodes
   void map_volume_fraction_to_nodes() override;
+
+  //! Map drag force coefficient
+  bool map_drag_force_coefficient() override;
 
  private:
   //! Cell

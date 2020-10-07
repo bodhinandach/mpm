@@ -424,6 +424,11 @@ class Node : public NodeBase<Tdim> {
     return drag_force_coefficient_;
   }
   //----------------------------------------------------------------------------
+  //! TwoPhase TwoPoint functions-----------------------------------------------
+  //! Compute prediction acceleration and velocity for two phase two point
+  //! \param[in] dt Timestep in analysis
+  bool compute_acceleration_velocity_twophase_twopoint_prediction(
+      double dt) noexcept override;
 
  private:
   //! Mutex

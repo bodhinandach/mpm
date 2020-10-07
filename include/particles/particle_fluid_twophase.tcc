@@ -46,3 +46,15 @@ bool mpm::TwoPhaseFluidParticle<Tdim>::assign_porosity() {
   status = true;
   return status;
 }
+
+// Compute stress
+// TODO: Investigate the influence of fluid shear stress
+template <unsigned Tdim>
+void mpm::TwoPhaseFluidParticle<Tdim>::compute_stress() noexcept {
+  // // Run particle compute stress
+  // mpm::Particle<Tdim>::compute_stress();
+
+  // // Calculate fluid turbulent stress
+  // this->stress_ += this->compute_turbulent_stress();
+  this->stress_.setZero();
+}

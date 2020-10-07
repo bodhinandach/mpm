@@ -244,6 +244,11 @@ class NodeBase {
   virtual bool compute_acceleration_velocity_twophase_explicit_cundall(
       double dt, double damping_factor) noexcept = 0;
 
+  //! Compute prediction acceleration and velocity for two phase two point
+  //! \param[in] dt Timestep in analysis
+  virtual bool compute_acceleration_velocity_twophase_twopoint_prediction(
+      double dt) noexcept = 0;
+
   //! Assign pressure constraint
   //! \param[in] phase Index corresponding to the phase
   //! \param[in] pressure Applied pressure constraint

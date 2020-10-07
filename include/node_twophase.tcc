@@ -151,3 +151,55 @@ void mpm::Node<Tdim, Tdof, Tnphases>::compute_porosity() {
   volume_fraction_(mpm::NodePhase::nLiquid) =
       1.0 - volume_fraction_(mpm::NodePhase::nSolid);
 }
+
+//! Compute acceleration and velocity for two phase two points
+template <unsigned Tdim, unsigned Tdof, unsigned Tnphases>
+bool mpm::Node<Tdim, Tdof, Tnphases>::
+    compute_acceleration_velocity_twophase_twopoint_prediction(
+        double dt) noexcept {
+  bool status = false;
+  const double tolerance = 1.0E-15;
+  if (this->mass(mpm::NodePhase::nSolid) > tolerance &&
+      this->mass(mpm::NodePhase::nLiquid) > tolerance) {
+    // Compute drag force
+    VectorDim drag_force = drag_force_coefficient_.cwiseProduct(
+        velocity_.col(mpm::NodePhase::nLiquid) -
+        velocity_.col(mpm::NodePhase::nSolid));
+
+    // Acceleration of pore fluid (momentume balance of fluid phase)
+    this->acceleration_.col(mpm::NodePhase::nLiquid) =
+        (this->external_force_.col(mpm::NodePhase::nLiquid) +
+         this->internal_force_.col(mpm::NodePhase::nLiquid) - drag_force) /
+        this->mass_(mpm::NodePhase::nLiquid);
+
+    // Acceleration of solid skeleton (momentume balance of mixture)
+    this->acceleration_.col(mpm::NodePhase::nSolid) =
+        (this->external_force_.col(mpm::NodePhase::nSolid) +
+         this->internal_force_.col(mpm::NodePhase::nSolid) + drag_force) /
+        this->mass_(mpm::NodePhase::nSolid);
+
+    // Apply friction constraints
+    this->apply_friction_constraints(dt);
+
+    // Velocity += acceleration * dt
+    this->velocity_ += this->acceleration_ * dt;
+
+    // Apply velocity constraints, which also sets acceleration to 0,
+    // when velocity is set.
+    this->apply_velocity_constraints();
+
+    // Set a threshold
+    for (unsigned i = 0; i < Tdim; ++i) {
+      if (std::abs(velocity_.col(mpm::NodePhase::nSolid)(i)) < tolerance)
+        velocity_.col(mpm::NodePhase::nSolid)(i) = 0.;
+      if (std::abs(acceleration_.col(mpm::NodePhase::nSolid)(i)) < tolerance)
+        acceleration_.col(mpm::NodePhase::nSolid)(i) = 0.;
+      if (std::abs(velocity_.col(mpm::NodePhase::nLiquid)(i)) < tolerance)
+        velocity_.col(mpm::NodePhase::nLiquid)(i) = 0.;
+      if (std::abs(acceleration_.col(mpm::NodePhase::nLiquid)(i)) < tolerance)
+        acceleration_.col(mpm::NodePhase::nLiquid)(i) = 0.;
+    }
+    status = true;
+  }
+  return status;
+}
