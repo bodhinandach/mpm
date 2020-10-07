@@ -223,6 +223,9 @@ class Cell {
   //! Initialize local elemental matrices
   bool initialise_element_matrix();
 
+  //! Initialize local elemental matrices for twophase system
+  bool initialise_element_matrix_twophase();
+
   //! Return local node indices
   Eigen::VectorXi local_node_indices();
 
@@ -242,6 +245,11 @@ class Cell {
     return poisson_right_matrix_;
   };
 
+  //! Return local laplacian RHS matrix for twophase
+  const Eigen::MatrixXd& poisson_right_matrix(unsigned phase) {
+    return poisson_right_matrix_twophase_[phase];
+  };
+
   //! Compute local poisson RHS matrix (Used in poisson equation)
   //! \param[in] shapefn shape function
   //! \param[in] grad_shapefn shape function gradient
@@ -250,6 +258,31 @@ class Cell {
                                    const Eigen::MatrixXd& grad_shapefn,
                                    double pvolume,
                                    double multiplier = 1.0) noexcept;
+
+  //! Compute local poisson RHS matrix (Used in poisson equation)
+  //! \param[in] phase Phase identifier
+  //! \param[in] shapefn shape function
+  //! \param[in] grad_shapefn shape function gradient
+  //! \param[in] pvolume volume weight
+  void compute_local_poisson_right_twophase(unsigned phase,
+                                            const Eigen::VectorXd& shapefn,
+                                            const Eigen::MatrixXd& grad_shapefn,
+                                            double pvolume,
+                                            double multiplier = 1.0) noexcept;
+
+  //! Return local laplacian RHS coupling matrix for twophase
+  const Eigen::MatrixXd& poisson_right_coupling_matrix() {
+    return poisson_right_coupling_matrix_;
+  };
+
+  //! Compute local poisson RHS coupling matrix for twophase
+  //! \param[in] porosity_grad Porosity gradient vector
+  //! \param[in] shapefn shape function
+  //! \param[in] grad_shapefn shape function gradient
+  //! \param[in] pvolume volume weight
+  void compute_local_poisson_right_coupling_matrix(
+      const Eigen::VectorXd& porosity_grad, const Eigen::VectorXd& shapefn,
+      double pvolume, double multiplier = 1.0) noexcept;
 
   //! Return local correction matrix
   const Eigen::MatrixXd& correction_matrix() { return correction_matrix_; };
@@ -346,6 +379,12 @@ class Cell {
   Eigen::MatrixXd poisson_right_matrix_;
   //! Local correction RHS matrix
   Eigen::MatrixXd correction_matrix_;
+  //! Matrices for twophase
+  //! TODO: Generalize it with navier stokes
+  //! Local poisson RHS matrix for twophase
+  std::vector<Eigen::MatrixXd> poisson_right_matrix_twophase_;
+  //! Local poisson RHS coupling matrix
+  Eigen::MatrixXd poisson_right_coupling_matrix_;
   //! Logger
   std::unique_ptr<spdlog::logger> console_;
 };  // Cell class

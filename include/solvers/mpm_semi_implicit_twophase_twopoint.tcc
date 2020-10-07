@@ -452,9 +452,13 @@ bool mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::reinitialise_matrix() {
   bool status = true;
   try {
     // Assigning matrix id (in each MPI rank)
+    // FIXME: NEED TO REDUCE THE NUMBER OF ACTIVE ID TO ONLY NODES WITH FLUID
+    // PARTICLES
     const auto nactive_node = mesh_->assign_active_nodes_id();
 
     // Assigning matrix id globally (required for rank-to-global mapping)
+    // FIXME: NEED TO REDUCE THE NUMBER OF ACTIVE ID TO ONLY NODES WITH FLUID
+    // PARTICLES
     unsigned nglobal_active_node = nactive_node;
 #ifdef USE_MPI
     nglobal_active_node = mesh_->assign_global_active_nodes_id();
@@ -468,8 +472,9 @@ bool mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::reinitialise_matrix() {
                                             this->step_ * this->dt_);
 
     // Initialise element matrix
-    mesh_->iterate_over_cells(std::bind(
-        &mpm::Cell<Tdim>::initialise_element_matrix, std::placeholders::_1));
+    mesh_->iterate_over_cells(
+        std::bind(&mpm::Cell<Tdim>::initialise_element_matrix_twophase,
+                  std::placeholders::_1));
 
   } catch (std::exception& exception) {
     console_->error("{} #{}: {}\n", __FILE__, __LINE__, exception.what());
@@ -485,17 +490,21 @@ bool mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::compute_poisson_equation(
   bool status = true;
   try {
     // Construct local cell laplacian matrix
-    mesh_->iterate_over_particles(
+    mesh_->iterate_over_particles_predicate(
         std::bind(&mpm::ParticleBase<Tdim>::map_laplacian_to_cell,
-                  std::placeholders::_1));
+                  std::placeholders::_1),
+        std::bind(&mpm::ParticleBase<Tdim>::phase_status, std::placeholders::_1,
+                  mpm::ParticlePhase::Liquid));
 
     // Assemble global laplacian matrix
     assembler_->assemble_laplacian_matrix(dt_);
 
     // Map Poisson RHS matrix
-    mesh_->iterate_over_particles(
+    mesh_->iterate_over_particles_predicate(
         std::bind(&mpm::ParticleBase<Tdim>::map_poisson_right_to_cell,
-                  std::placeholders::_1));
+                  std::placeholders::_1),
+        std::bind(&mpm::ParticleBase<Tdim>::phase_status, std::placeholders::_1,
+                  mpm::ParticlePhase::Liquid));
 
     // Assemble poisson RHS vector
     assembler_->assemble_poisson_right(dt_);

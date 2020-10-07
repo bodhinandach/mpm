@@ -63,6 +63,11 @@ class TwoPhaseFluidParticle : public mpm::FluidParticle<Tdim> {
   //! Compute stress
   void compute_stress() noexcept override;
 
+  //! Map laplacian element matrix to cell (used in poisson equation LHS)
+  bool map_laplacian_to_cell() override;
+
+  //! Map poisson rhs element matrix to cell (used in poisson equation RHS)
+  bool map_poisson_right_to_cell() override;
  private:
   //! Cell
   using ParticleBase<Tdim>::cell_;
@@ -91,6 +96,8 @@ class TwoPhaseFluidParticle : public mpm::FluidParticle<Tdim> {
 
   //! Material point porosity (volume of voids / total volume)
   double porosity_{1.0};
+  //! Material point porosity gradient
+  VectorDim porosity_gradient_;
   //! Logger
   std::unique_ptr<spdlog::logger> console_;
 };  // TwoPhaseFluidParticle class
