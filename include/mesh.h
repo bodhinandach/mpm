@@ -295,7 +295,8 @@ class Mesh {
   //! \param[in] phase Index corresponding to the phase
   //! \retval statevars_data Vector containing state variable from particles
   std::vector<double> particles_statevars_data(
-      const std::string& attribute, unsigned phase = mpm::ParticlePhase::Solid);
+      const std::string& attribute,
+      unsigned phase = mpm::ParticlePhase::SinglePhase);
 
   //! Compute and assign rotation matrix to nodes
   //! \param[in] euler_angles Map of node number and respective euler_angles
@@ -538,7 +539,8 @@ class Mesh {
   //! Compute correction force in the node
   bool compute_nodal_correction_force(
       const Eigen::SparseMatrix<double>& correction_matrix,
-      const Eigen::VectorXd& pressure_increment, double dt);
+      const Eigen::VectorXd& pressure_increment, double dt,
+      unsigned phase = mpm::ParticlePhase::SinglePhase);
 
   // Create the nodal properties' map
   void create_nodal_properties();

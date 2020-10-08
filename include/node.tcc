@@ -668,12 +668,11 @@ void mpm::Node<Tdim, Tdof, Tnphases>::update_pressure_increment(
 //! Compute nodal correction force
 template <unsigned Tdim, unsigned Tdof, unsigned Tnphases>
 bool mpm::Node<Tdim, Tdof, Tnphases>::compute_nodal_correction_force(
-    const VectorDim& correction_force) {
+    const VectorDim& correction_force, unsigned phase) {
   bool status = true;
-
   try {
     // Compute correction force for water phase
-    correction_force_.col(0) = correction_force;
+    correction_force_.col(phase) = correction_force;
   } catch (std::exception& exception) {
     console_->error("{} #{}: {}\n", __FILE__, __LINE__, exception.what());
     status = false;
@@ -684,8 +683,8 @@ bool mpm::Node<Tdim, Tdof, Tnphases>::compute_nodal_correction_force(
 //! Compute semi-implicit acceleration and velocity
 template <unsigned Tdim, unsigned Tdof, unsigned Tnphases>
 bool mpm::Node<Tdim, Tdof, Tnphases>::
-    compute_acceleration_velocity_navierstokes_semi_implicit(unsigned phase,
-                                                             double dt) {
+    compute_acceleration_velocity_semi_implicit_corrector(unsigned phase,
+                                                          double dt) {
   bool status = true;
   const double tolerance = std::numeric_limits<double>::min();
   try {

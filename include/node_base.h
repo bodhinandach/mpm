@@ -19,6 +19,7 @@ namespace mpm {
 
 //! Particle phases
 enum NodePhase : unsigned int {
+  nSinglePhase = 0,
   nSolid = 0,
   nLiquid = 1,
   nGas = 2,
@@ -351,7 +352,7 @@ class NodeBase {
   //! \param[in] phase Index corresponding to the phase
   //! \param[in] dt Timestep in analysis
   //! \retval status Computation status
-  virtual bool compute_acceleration_velocity_navierstokes_semi_implicit(
+  virtual bool compute_acceleration_velocity_semi_implicit_corrector(
       unsigned phase, double dt) = 0;
 
   //! Return pressure constraint
@@ -368,7 +369,9 @@ class NodeBase {
 
   //! Compute nodal correction force term
   virtual bool compute_nodal_correction_force(
-      const VectorDim& correction_force) = 0;
+      const VectorDim& correction_force,
+      unsigned phase = mpm::NodePhase::nSinglePhase) = 0;
+
   //! Update nodal property at the nodes from particle
   //! \param[in] update A boolean to update (true) or assign (false)
   //! \param[in] property Property name

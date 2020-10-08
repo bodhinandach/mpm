@@ -7,7 +7,7 @@ mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::MPMSemiImplicitTwoPhaseTwoPoint(
   console_ = spdlog::get("MPMSemiImplicitTwoPhaseTwoPoint");
 }
 
-//! MPM semi-implicit navier-stokes solver
+//! MPM semi-implicit two-phase two-point solver
 template <unsigned Tdim>
 bool mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::solve() {
   bool status = true;
@@ -325,9 +325,11 @@ bool mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::solve() {
         std::bind(&mpm::NodeBase<Tdim>::status, std::placeholders::_1));
 
     // Use nodal pressure to update particle pressure
-    mesh_->iterate_over_particles(
+    mesh_->iterate_over_particles_predicate(
         std::bind(&mpm::ParticleBase<Tdim>::compute_updated_pressure,
-                  std::placeholders::_1));
+                  std::placeholders::_1),
+        std::bind(&mpm::ParticleBase<Tdim>::phase_status, std::placeholders::_1,
+                  liquid));
 
     // Compute correction force
     this->compute_correction_force();
@@ -338,6 +340,13 @@ bool mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::solve() {
       // MPI all reduce correction force
       mesh_->template nodal_halo_exchange<Eigen::Matrix<double, Tdim, 1>, Tdim>(
           std::bind(&mpm::NodeBase<Tdim>::correction_force,
+                    std::placeholders::_1, solid),
+          std::bind(&mpm::NodeBase<Tdim>::update_correction_force,
+                    std::placeholders::_1, false, solid,
+                    std::placeholders::_2));
+      // MPI all reduce correction force
+      mesh_->template nodal_halo_exchange<Eigen::Matrix<double, Tdim, 1>, Tdim>(
+          std::bind(&mpm::NodeBase<Tdim>::correction_force,
                     std::placeholders::_1, liquid),
           std::bind(&mpm::NodeBase<Tdim>::update_correction_force,
                     std::placeholders::_1, false, liquid,
@@ -345,11 +354,17 @@ bool mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::solve() {
     }
 #endif
 
-    // Compute corrected acceleration and velocity
+    // Compute corrected acceleration and velocity in solid and liquid phase
     mesh_->iterate_over_nodes_predicate(
         std::bind(
             &mpm::NodeBase<
-                Tdim>::compute_acceleration_velocity_navierstokes_semi_implicit,
+                Tdim>::compute_acceleration_velocity_semi_implicit_corrector,
+            std::placeholders::_1, solid, this->dt_),
+        std::bind(&mpm::NodeBase<Tdim>::status, std::placeholders::_1));
+    mesh_->iterate_over_nodes_predicate(
+        std::bind(
+            &mpm::NodeBase<
+                Tdim>::compute_acceleration_velocity_semi_implicit_corrector,
             std::placeholders::_1, liquid, this->dt_),
         std::bind(&mpm::NodeBase<Tdim>::status, std::placeholders::_1));
 
@@ -391,11 +406,12 @@ bool mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::solve() {
     }
   }
   auto solver_end = std::chrono::steady_clock::now();
-  console_->info("Rank {}, SemiImplicit_NavierStokes solver duration: {} ms",
-                 mpi_rank,
-                 std::chrono::duration_cast<std::chrono::milliseconds>(
-                     solver_end - solver_begin)
-                     .count());
+  console_->info(
+      "Rank {}, SemiImplicit_TwoPhase_TwoPoint solver duration: {} ms",
+      mpi_rank,
+      std::chrono::duration_cast<std::chrono::milliseconds>(solver_end -
+                                                            solver_begin)
+          .count());
 
   return status;
 }
@@ -550,7 +566,12 @@ bool mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::compute_correction_force() {
 
     // Assign correction force
     mesh_->compute_nodal_correction_force(
-        assembler_->correction_matrix(), assembler_->pressure_increment(), dt_);
+        assembler_->correction_matrix(mpm::ParticlePhase::Solid),
+        assembler_->pressure_increment(), dt_, mpm::ParticlePhase::Solid);
+
+    mesh_->compute_nodal_correction_force(
+        assembler_->correction_matrix(mpm::ParticlePhase::Liquid),
+        assembler_->pressure_increment(), dt_, mpm::ParticlePhase::Liquid);
 
   } catch (std::exception& exception) {
     console_->error("{} #{}: {}\n", __FILE__, __LINE__, exception.what());

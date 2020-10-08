@@ -2191,7 +2191,7 @@ void mpm::Mesh<Tdim>::create_nodal_properties() {
 template <unsigned Tdim>
 bool mpm::Mesh<Tdim>::compute_nodal_correction_force(
     const Eigen::SparseMatrix<double>& correction_matrix,
-    const Eigen::VectorXd& pressure_increment, double dt) {
+    const Eigen::VectorXd& pressure_increment, double dt, unsigned phase) {
   bool status = true;
   try {
     //! Active node size
@@ -2218,7 +2218,7 @@ bool mpm::Mesh<Tdim>::compute_nodal_correction_force(
 
       // Compute correction force for each node
       map_nodes_[(*nitr)->id()]->compute_nodal_correction_force(
-          nodal_correction_force);
+          nodal_correction_force, phase);
     }
 
   } catch (std::exception& exception) {

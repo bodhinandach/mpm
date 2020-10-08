@@ -306,7 +306,8 @@ class Node : public NodeBase<Tdim> {
 
   //! Compute nodal correction force term
   bool compute_nodal_correction_force(
-      const VectorDim& correction_force) override;
+      const VectorDim& correction_force,
+      unsigned phase = mpm::NodePhase::nSinglePhase) override;
 
   //! Update correction force
   //! \param[in] update A boolean to update (true) or assign (false)
@@ -378,7 +379,7 @@ class Node : public NodeBase<Tdim> {
   //! \param[in] phase Index corresponding to the phase
   //! \param[in] dt Timestep in analysis
   //! \retval status Computation status
-  bool compute_acceleration_velocity_navierstokes_semi_implicit(
+  bool compute_acceleration_velocity_semi_implicit_corrector(
       unsigned phase, double dt) override;
 
   //! Update nodal property at the nodes from particle
