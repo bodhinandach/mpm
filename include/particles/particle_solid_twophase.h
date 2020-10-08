@@ -76,6 +76,9 @@ class TwoPhaseSolidParticle : public mpm::Particle<Tdim> {
   //! Map drag force coefficient
   bool map_drag_force_coefficient() override;
 
+  //! Map correction matrix element matrix to cell (used to correct velocity)
+  bool map_correction_matrix_to_cell() override;
+
  private:
   //! Cell
   using ParticleBase<Tdim>::cell_;

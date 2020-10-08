@@ -68,6 +68,10 @@ class TwoPhaseFluidParticle : public mpm::FluidParticle<Tdim> {
 
   //! Map poisson rhs element matrix to cell (used in poisson equation RHS)
   bool map_poisson_right_to_cell() override;
+
+  //! Map correction matrix element matrix to cell (used to correct velocity)
+  bool map_correction_matrix_to_cell() override;
+
  private:
   //! Cell
   using ParticleBase<Tdim>::cell_;

@@ -112,3 +112,17 @@ bool mpm::TwoPhaseFluidParticle<Tdim>::map_poisson_right_to_cell() {
   }
   return status;
 }
+
+//! Map correction matrix element matrix to cell (used to correct velocity)
+template <unsigned Tdim>
+bool mpm::TwoPhaseFluidParticle<Tdim>::map_correction_matrix_to_cell() {
+  bool status = true;
+  try {
+    cell_->compute_local_correction_matrix_twophase(
+        this->phase(), shapefn_, dn_dx_, volume_, this->porosity_);
+
+  } catch (std::exception& exception) {
+    console_->error("{} #{}: {}\n", __FILE__, __LINE__, exception.what());
+  }
+  return status;
+}

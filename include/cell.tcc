@@ -1000,12 +1000,31 @@ void mpm::Cell<Tdim>::compute_local_poisson_right_coupling_matrix(
 template <unsigned Tdim>
 void mpm::Cell<Tdim>::compute_local_correction_matrix(
     const Eigen::VectorXd& shapefn, const Eigen::MatrixXd& grad_shapefn,
-    double pvolume) noexcept {
+    double pvolume, double multiplier) noexcept {
 
   std::lock_guard<std::mutex> guard(cell_mutex_);
   for (unsigned i = 0; i < Tdim; i++) {
     correction_matrix_.block(0, i * nnodes_, nnodes_, nnodes_) +=
-        shapefn * grad_shapefn.col(i).transpose() * pvolume;
+        shapefn * grad_shapefn.col(i).transpose() * multiplier * pvolume;
+  }
+}
+
+//! Compute local correction matrix
+//! Used to compute corrector of nodal velocity for Two Phase solver
+template <unsigned Tdim>
+void mpm::Cell<Tdim>::compute_local_correction_matrix_twophase(
+    unsigned phase, const Eigen::VectorXd& shapefn,
+    const Eigen::MatrixXd& grad_shapefn, double pvolume,
+    double multiplier) noexcept {
+
+  assert(phase < correction_matrix_twophase_.size() &&
+         correction_matrix_twophase_.size() == 2);
+
+  std::lock_guard<std::mutex> guard(cell_mutex_);
+  for (unsigned i = 0; i < Tdim; i++) {
+    correction_matrix_twophase_[phase].block(0, i * nnodes_, nnodes_,
+                                             nnodes_) +=
+        shapefn * grad_shapefn.col(i).transpose() * multiplier * pvolume;
   }
 }
 

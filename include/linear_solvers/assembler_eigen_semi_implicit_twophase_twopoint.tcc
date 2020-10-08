@@ -234,23 +234,30 @@ bool mpm::AssemblerEigenSemiImplicitTwoPhaseTwoPoint<
     Tdim>::assemble_corrector_right(double dt) {
   bool status = true;
   try {
-    // Resize correction matrix
-    correction_matrix_.resize(active_dof_, active_dof_ * Tdim);
-    correction_matrix_.setZero();
+    // Phase index
+    const unsigned solid = mpm::ParticlePhase::Solid;
+    const unsigned liquid = mpm::ParticlePhase::Liquid;
 
-    // Reserve storage for sparse matrix
-    switch (Tdim) {
-      // For 2d: 10 entries /column
-      case (2): {
-        correction_matrix_.reserve(
-            Eigen::VectorXi::Constant(active_dof_ * Tdim, 10));
-        break;
-      }
-      // For 3d: 30 entries /column
-      case (3): {
-        correction_matrix_.reserve(
-            Eigen::VectorXi::Constant(active_dof_ * Tdim, 30));
-        break;
+    // Resize correction matrix
+    correction_matrix_.resize(2);
+    for (unsigned phase = 0; phase < correction_matrix_.size(); phase++) {
+      correction_matrix_[phase].resize(active_dof_, active_dof_ * Tdim);
+      correction_matrix_[phase].setZero();
+
+      // Reserve storage for sparse matrix
+      switch (Tdim) {
+        // For 2d: 10 entries /column
+        case (2): {
+          correction_matrix_[phase].reserve(
+              Eigen::VectorXi::Constant(active_dof_ * Tdim, 10));
+          break;
+        }
+        // For 3d: 30 entries /column
+        case (3): {
+          correction_matrix_[phase].reserve(
+              Eigen::VectorXi::Constant(active_dof_ * Tdim, 30));
+          break;
+        }
       }
     }
 
@@ -262,15 +269,23 @@ bool mpm::AssemblerEigenSemiImplicitTwoPhaseTwoPoint<
     for (auto cell_itr = cells.cbegin(); cell_itr != cells.cend(); ++cell_itr) {
       if ((*cell_itr)->status()) {
         unsigned nnodes_per_cell = global_node_indices_.at(cid).size();
-        auto cell_correction_matrix = (*cell_itr)->correction_matrix();
+        auto solid_cell_correction_matrix =
+            (*cell_itr)->correction_matrix(solid);
+        auto liquid_cell_correction_matrix =
+            (*cell_itr)->correction_matrix(liquid);
         for (unsigned k = 0; k < Tdim; k++) {
           for (unsigned i = 0; i < nnodes_per_cell; i++) {
             for (unsigned j = 0; j < nnodes_per_cell; j++) {
-              // Fluid
-              correction_matrix_.coeffRef(
+              // Solid
+              correction_matrix_[solid].coeffRef(
                   global_node_indices_.at(cid)(i),
                   k * active_dof_ + global_node_indices_.at(cid)(j)) +=
-                  cell_correction_matrix(i, j + k * nnodes_per_cell);
+                  solid_cell_correction_matrix(i, j + k * nnodes_per_cell);
+              // Liquid
+              correction_matrix_[liquid].coeffRef(
+                  global_node_indices_.at(cid)(i),
+                  k * active_dof_ + global_node_indices_.at(cid)(j)) +=
+                  liquid_cell_correction_matrix(i, j + k * nnodes_per_cell);
             }
           }
         }

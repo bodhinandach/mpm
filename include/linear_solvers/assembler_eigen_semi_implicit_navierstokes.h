@@ -61,6 +61,11 @@ class AssemblerEigenSemiImplicitNavierStokes : public AssemblerBase<Tdim> {
     return correction_matrix_;
   }
 
+  //! Return correction matrix with phase
+  Eigen::SparseMatrix<double>& correction_matrix(unsigned phase) {
+    return this->correction_matrix();
+  }
+
   //! Assemble corrector RHS
   bool assemble_corrector_right(double dt) override;
 

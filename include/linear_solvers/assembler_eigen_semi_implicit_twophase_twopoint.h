@@ -24,62 +24,34 @@ class AssemblerEigenSemiImplicitTwoPhaseTwoPoint
   //! Assemble poisson RHS vector
   bool assemble_poisson_right(double dt) override;
 
-  //! Assign free surface node id
-  void assign_free_surface(
-      const std::set<mpm::Index>& free_surface_id) override {
-    free_surface_ = free_surface_id;
-  }
-
-  //! Return pressure increment
-  Eigen::VectorXd& pressure_increment() override { return pressure_increment_; }
-
-  //! Assign pressure increment
-  void assign_pressure_increment(
-      const Eigen::VectorXd& pressure_increment) override {
-    pressure_increment_ = pressure_increment;
-  }
-
-  //! Return correction matrix
-  Eigen::SparseMatrix<double>& correction_matrix() override {
-    return correction_matrix_;
-  }
-
   //! Assemble corrector RHS
   bool assemble_corrector_right(double dt) override;
 
-  //! Return the total size of global dof in all rank
-  unsigned global_active_dof() override { return global_active_dof_; };
+  //! Return correction matrix
+  Eigen::SparseMatrix<double>& correction_matrix() override {
+    return this->correction_matrix(mpm::ParticlePhase::Solid);
+  }
 
-  //! Return a vector to map local (rank) index to global index
-  std::vector<int> rank_global_mapper() override {
-    return rank_global_mapper_;
-  };
+  //! Return correction matrix with phase index
+  Eigen::SparseMatrix<double>& correction_matrix(unsigned phase) override {
+    return correction_matrix_[phase];
+  }
 
  protected:
   //! number of nodes
   using AssemblerBase<Tdim>::active_dof_;
   //! Mesh object
   using AssemblerBase<Tdim>::mesh_;
-  //! Logger
-  std::shared_ptr<spdlog::logger> console_;
   //! Global node indices
-  std::vector<Eigen::VectorXi> global_node_indices_;
+  using AssemblerEigenSemiImplicitNavierStokes<Tdim>::global_node_indices_;
+  //! Logger
+  using AssemblerEigenSemiImplicitNavierStokes<Tdim>::console_;
   //! Laplacian matrix
-  Eigen::SparseMatrix<double> laplacian_matrix_;
+  using AssemblerEigenSemiImplicitNavierStokes<Tdim>::laplacian_matrix_;
   //! Poisson RHS vector
-  Eigen::VectorXd poisson_rhs_vector_;
-  //! Free surface
-  std::set<mpm::Index> free_surface_;
-  //! Pressure constraints
-  Eigen::SparseVector<double> pressure_constraints_;
-  //! \delta p^(t+1) = p^(t+1) - beta * p^(t)
-  Eigen::VectorXd pressure_increment_;
-  //! correction_matrix
-  Eigen::SparseMatrix<double> correction_matrix_;
-  //! Number of total active_dof in all rank
-  unsigned global_active_dof_;
-  //! Rank to Global mapper
-  std::vector<int> rank_global_mapper_;
+  using AssemblerEigenSemiImplicitNavierStokes<Tdim>::poisson_rhs_vector_;
+  //! Correction_matrix for twophase
+  std::vector<Eigen::SparseMatrix<double>> correction_matrix_;
 };
 }  // namespace mpm
 

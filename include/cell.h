@@ -287,10 +287,30 @@ class Cell {
   //! Return local correction matrix
   const Eigen::MatrixXd& correction_matrix() { return correction_matrix_; };
 
+  //! Return local correction matrix
+  const Eigen::MatrixXd& correction_matrix(unsigned phase) {
+    return correction_matrix_twophase_[phase];
+  };
+
   //! Compute local correction matrix (Used to correct velocity)
+  //! \param[in] shapefn shape function
+  //! \param[in] grad_shapefn shape function gradient
+  //! \param[in] pvolume volume weight
   void compute_local_correction_matrix(const Eigen::VectorXd& shapefn,
                                        const Eigen::MatrixXd& grad_shapefn,
-                                       double pvolume) noexcept;
+                                       double pvolume,
+                                       double multiplier = 1.0) noexcept;
+
+  //! Compute local correction matrix (Used to correct velocity)
+  //! \param[in] phase Phase identifier
+  //! \param[in] shapefn shape function
+  //! \param[in] grad_shapefn shape function gradient
+  //! \param[in] pvolume volume weight
+  void compute_local_correction_matrix_twophase(
+      unsigned phase, const Eigen::VectorXd& shapefn,
+      const Eigen::MatrixXd& grad_shapefn, double pvolume,
+      double multiplier = 1.0) noexcept;
+
   //! Return previous mpi rank
   unsigned previous_mpirank() const;
 
@@ -385,6 +405,8 @@ class Cell {
   std::vector<Eigen::MatrixXd> poisson_right_matrix_twophase_;
   //! Local poisson RHS coupling matrix
   Eigen::MatrixXd poisson_right_coupling_matrix_;
+  //! Local poisson RHS matrix for twophase
+  std::vector<Eigen::MatrixXd> correction_matrix_twophase_;
   //! Logger
   std::unique_ptr<spdlog::logger> console_;
 };  // Cell class

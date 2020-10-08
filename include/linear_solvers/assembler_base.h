@@ -81,6 +81,9 @@ class AssemblerBase {
   //! Return correction matrix
   virtual Eigen::SparseMatrix<double>& correction_matrix() = 0;
 
+  //! Return correction matrix for twophase
+  virtual Eigen::SparseMatrix<double>& correction_matrix(unsigned phase) = 0;
+
   //! Assemble corrector RHS
   virtual bool assemble_corrector_right(double dt) = 0;
 
