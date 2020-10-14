@@ -78,6 +78,13 @@ bool mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::solve() {
   // Compute nodal volume from gauss quadrature
   this->compute_nodes_gauss_volume();
 
+  mesh_->iterate_over_cells(
+      std::bind(&mpm::Cell<Tdim>::activate_nodes, std::placeholders::_1));
+
+  // Iterate over each particle to compute shapefn
+  mesh_->iterate_over_particles(std::bind(
+      &mpm::ParticleBase<Tdim>::compute_shapefn, std::placeholders::_1));
+
   // Map porosity from solid to fluid particles
   this->compute_fluid_particle_porosity();
 
@@ -86,6 +93,7 @@ bool mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::solve() {
       std::bind(&mpm::ParticleBase<Tdim>::compute_mass, std::placeholders::_1));
 
   // Assign beta to each particle
+  // TODO: currently only consider full projection
   mesh_->iterate_over_particles(
       std::bind(&mpm::ParticleBase<Tdim>::assign_projection_parameter,
                 std::placeholders::_1, beta_));
@@ -173,18 +181,23 @@ bool mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::solve() {
     mesh_->compute_free_surface(free_surface_detection_, volume_tolerance_);
 
     // Spawn a task for initializing pressure at free surface
-#pragma omp parallel sections
-    {
-#pragma omp section
-      {
-        // Assign initial pressure for all free-surface particle
-        mesh_->iterate_over_particles_predicate(
-            std::bind(&mpm::ParticleBase<Tdim>::assign_pressure,
-                      std::placeholders::_1, 0.0, liquid),
-            std::bind(&mpm::ParticleBase<Tdim>::free_surface,
-                      std::placeholders::_1));
-      }
-    }  // Wait to complete
+    // FIXME: Only apply this to free surface of fluid particle, otherwise error
+    // #pragma omp parallel sections
+    //     {
+    // #pragma omp section
+    //       {
+    //         // Assign initial pressure for all free-surface particle
+    //         // NOTE: mpm::ParticlePhase::SinglePhase is used here instead of
+    //         liquid,
+    //         // since that indicate the state variable phase index
+    //         mesh_->iterate_over_particles_predicate(
+    //             std::bind(&mpm::ParticleBase<Tdim>::assign_pressure,
+    //                       std::placeholders::_1, 0.0,
+    //                       mpm::ParticlePhase::SinglePhase),
+    //             std::bind(&mpm::ParticleBase<Tdim>::free_surface,
+    //                       std::placeholders::_1));
+    //       }
+    //     }  // Wait to complete
 
     // Compute nodal velocity at the begining of time step
     mesh_->iterate_over_nodes_predicate(
@@ -377,7 +390,12 @@ bool mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::solve() {
     mesh_->apply_particle_velocity_constraints();
 
     // Pressure smoothing
+    // FIXME: Pressure smoothing for liquid only wont work due to memory issue
     if (pressure_smoothing_) this->pressure_smoothing(liquid);
+
+    // Reset particle phase container in cell
+    mesh_->iterate_over_cells(std::bind(&mpm::Cell<Tdim>::clear_particle_phase,
+                                        std::placeholders::_1));
 
     // Locate particle
     auto unlocatable_particles = mesh_->locate_particles_mesh();
