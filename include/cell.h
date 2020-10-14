@@ -340,6 +340,43 @@ class Cell {
   //! \param[in] phase to map volume
   void map_cell_gauss_volume_to_nodes();
 
+  //! Return the status of a cell: active (if a particle with specific phase is
+  //! present)
+  //! \param[in] phase Phase of particle
+  //! \retval status Return if particle with selected type is in cell or not
+  bool status(unsigned phase) const {
+    if (particles_phase_.find(phase) != particles_phase_.end())
+      return particles_phase_.at(phase).size();
+    return false;
+  }
+
+  //! Return the number of particles with a specific type
+  //! \param[in] phase Phase of particle
+  //! \retval Number of particle with designated type
+  unsigned nparticles(unsigned phase) const {
+    if (particles_phase_.find(phase) != particles_phase_.end())
+      return particles_phase_.at(phase).size();
+    return 0;
+  }
+
+  //! Return particles_ with specific type
+  //! \param[in] phase Phase of particle
+  //! \retval A vector of particle id
+  std::vector<mpm::Index> particles(unsigned phase) const {
+    if (particles_phase_.find(phase) != particles_phase_.end())
+      return particles_phase_.at(phase);
+    return std::vector<Index>();
+  }
+
+  //! Add an id of a particle in the cell with its corresponding phase
+  //! \param[in] id Global id of a particle
+  //! \param[in] phase Phase of particle
+  //! \retval status Return the successful addition of a particle id
+  bool add_particle_phase(Index id, unsigned phase);
+
+  //! Clear all particle phase in cell
+  void clear_particle_phase() { particles_phase_.clear(); }
+
  private:
   //! Approximately check if a point is in a cell
   //! \param[in] point Coordinates of point
@@ -387,6 +424,7 @@ class Cell {
   //! Normal of face
   //! first-> face_id, second->vector of the normal
   std::map<unsigned, Eigen::VectorXd> face_normals_;
+
   //! Solving status
   bool solving_status_{false};
   //! Free surface bool
@@ -399,6 +437,8 @@ class Cell {
   Eigen::MatrixXd poisson_right_matrix_;
   //! Local correction RHS matrix
   Eigen::MatrixXd correction_matrix_;
+  //! particles phase associated with particles_
+  std::map<unsigned, std::vector<Index>> particles_phase_;
   //! Matrices for twophase
   //! TODO: Generalize it with navier stokes
   //! Local poisson RHS matrix for twophase

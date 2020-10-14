@@ -1072,3 +1072,25 @@ void mpm::Cell<Tdim>::map_cell_gauss_volume_to_nodes() {
     }
   }
 }
+
+//! Add an id of a particle in the cell with its corresponding phase
+template <unsigned Tdim>
+bool mpm::Cell<Tdim>::add_particle_phase(Index id, unsigned phase) {
+  bool status = false;
+  std::lock_guard<std::mutex> guard(cell_mutex_);
+  // Check if it is found in the container
+  if (particles_phase_.find(phase) == particles_phase_.end()) {
+    std::vector<Index> vec;
+    vec.emplace_back(id);
+    particles_phase_.emplace(phase, vec);
+    status = true;
+  } else {
+    auto itr = std::find(particles_phase_.at(phase).begin(),
+                         particles_phase_.at(phase).end(), id);
+    if (itr == particles_phase_.at(phase).end()) {
+      particles_phase_.at(phase).emplace_back(id);
+      status = true;
+    }
+  }
+  return status;
+}
