@@ -34,12 +34,12 @@ bool mpm::AssemblerEigenSemiImplicitTwoPhaseTwoPoint<
     }
 
     // Cell pointer
-    // TODO: FIX to those with liquid particles
     const auto& cells = mesh_->cells();
 
     // Iterate over cells
     mpm::Index cid = 0;
     for (auto cell_itr = cells.cbegin(); cell_itr != cells.cend(); ++cell_itr) {
+      // TODO: Only consider cell with fluid particles inside
       if ((*cell_itr)->status()) {
         // Node ids in each cell
         const auto nids = global_node_indices_.at(cid);
@@ -267,6 +267,7 @@ bool mpm::AssemblerEigenSemiImplicitTwoPhaseTwoPoint<
     // Iterate over cells
     unsigned cid = 0;
     for (auto cell_itr = cells.cbegin(); cell_itr != cells.cend(); ++cell_itr) {
+      // TODO: Only do it in cell with fluid particles
       if ((*cell_itr)->status()) {
         unsigned nnodes_per_cell = global_node_indices_.at(cid).size();
         auto solid_cell_correction_matrix =

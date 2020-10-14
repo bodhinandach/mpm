@@ -10,6 +10,34 @@ mpm::TwoPhaseSolidParticle<Tdim>::TwoPhaseSolidParticle(Index id,
   console_ = std::make_unique<spdlog::logger>(logger, mpm::stdout_sink);
 }
 
+// Assign a cell to particle
+template <unsigned Tdim>
+bool mpm::TwoPhaseSolidParticle<Tdim>::assign_cell(
+    const std::shared_ptr<Cell<Tdim>>& cellptr) {
+  bool status = mpm::Particle<Tdim>::assign_cell(cellptr);
+  status = cellptr->add_particle_phase(this->id(), this->phase());
+  return status;
+}
+
+// Assign a cell to particle
+template <unsigned Tdim>
+bool mpm::TwoPhaseSolidParticle<Tdim>::assign_cell_xi(
+    const std::shared_ptr<Cell<Tdim>>& cellptr,
+    const Eigen::Matrix<double, Tdim, 1>& xi) {
+  bool status = mpm::Particle<Tdim>::assign_cell_xi(cellptr, xi);
+  status = cellptr->add_particle_phase(this->id(), this->phase());
+  return status;
+}
+
+// Compute volume of the particle
+template <unsigned Tdim>
+void mpm::TwoPhaseSolidParticle<Tdim>::compute_volume() noexcept {
+  // Check if particle has a valid cell ptr
+  assert(cell_ != nullptr);
+  // Volume of the cell / # of particles
+  this->assign_volume(cell_->volume() / cell_->nparticles(this->phase()));
+}
+
 // Compute mass of solid particle
 template <unsigned Tdim>
 void mpm::TwoPhaseSolidParticle<Tdim>::compute_mass() noexcept {
