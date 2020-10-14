@@ -2631,6 +2631,10 @@ bool mpm::Mesh<Tdim>::compute_free_surface_by_density(double volume_tolerance) {
     this->iterate_over_cells(
         std::bind(&mpm::Cell<Tdim>::map_cell_volume_to_nodes,
                   std::placeholders::_1, mpm::ParticlePhase::SinglePhase));
+    // FIXME: Need to work on index when twophase particle is used
+    this->iterate_over_cells(
+        std::bind(&mpm::Cell<Tdim>::map_cell_volume_to_nodes,
+                  std::placeholders::_1, mpm::ParticlePhase::Liquid));
 
 #ifdef USE_MPI
     // Run if there is more than a single MPI task
@@ -2642,6 +2646,12 @@ bool mpm::Mesh<Tdim>::compute_free_surface_by_density(double volume_tolerance) {
           std::bind(&mpm::NodeBase<Tdim>::update_volume, std::placeholders::_1,
                     false, mpm::ParticlePhase::SinglePhase,
                     std::placeholders::_2));
+      // FIXME: Need to work on index when twophase particle is used
+      this->template nodal_halo_exchange<double, 1>(
+          std::bind(&mpm::NodeBase<Tdim>::volume, std::placeholders::_1,
+                    mpm::ParticlePhase::Liquid),
+          std::bind(&mpm::NodeBase<Tdim>::update_volume, std::placeholders::_1,
+                    false, mpm::ParticlePhase::Liquid, std::placeholders::_2));
     }
 #endif
 
