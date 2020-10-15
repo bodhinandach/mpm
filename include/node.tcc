@@ -43,6 +43,7 @@ void mpm::Node<Tdim, Tdof, Tnphases>::initialise() noexcept {
   drag_force_coefficient_.setZero();
   gauss_volume_ = 0.;
   volume_fraction_.setZero();
+  phase_status_.setZero();
 }
 
 //! Initialise shared pointer to nodal properties pool

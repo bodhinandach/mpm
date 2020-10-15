@@ -340,6 +340,10 @@ class Cell {
   //! \param[in] phase to map volume
   void map_cell_gauss_volume_to_nodes();
 
+  //! Activate nodes if particle with specific phase is present
+  //! \param[in] phase Phase of particle
+  void activate_nodes_phase_status(unsigned phase);
+
   //! Return the status of a cell: active (if a particle with specific phase is
   //! present)
   //! \param[in] phase Phase of particle

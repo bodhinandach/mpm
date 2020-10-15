@@ -160,6 +160,16 @@ void mpm::Cell<Tdim>::activate_nodes() {
   }
 }
 
+//! Activate nodes if particle with specific phase is present
+template <unsigned Tdim>
+void mpm::Cell<Tdim>::activate_nodes_phase_status(unsigned phase) {
+  // If number of particles are present, set all associated nodes as active
+  if (this->nparticles(phase) > 0) {
+    for (unsigned i = 0; i < nodes_.size(); ++i)
+      nodes_[i]->assign_phase_status(phase, true);
+  }
+}
+
 //! Return a vector of side node id pairs
 template <unsigned Tdim>
 std::vector<std::array<mpm::Index, 2>> mpm::Cell<Tdim>::side_node_pairs()

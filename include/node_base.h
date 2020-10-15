@@ -79,6 +79,12 @@ class NodeBase {
   //! Return status
   virtual bool status() const = 0;
 
+  //! Assign phase status
+  virtual void assign_phase_status(unsigned phase, bool status) = 0;
+
+  //! Return status for a given phase
+  virtual bool phase_status(unsigned phase) const = 0;
+
   //! Assign status
   virtual void assign_solving_status(bool status) = 0;
 

@@ -66,6 +66,20 @@ class Node : public NodeBase<Tdim> {
   //! Return status
   bool status() const override { return status_; }
 
+  //! Assign phase status
+  //! \param[in] phase Index corresponding to the phase
+  void assign_phase_status(unsigned phase, bool status) override {
+    node_mutex_.lock();
+    phase_status_(phase) = status;
+    node_mutex_.unlock();
+  }
+
+  //! Return status for a given phase
+  //! \param[in] phase Index corresponding to the phase
+  bool phase_status(unsigned phase) const override {
+    return phase_status_(phase);
+  }
+
   //! Assign solving status
   void assign_solving_status(bool status) override { solving_status_ = status; }
 
@@ -446,6 +460,8 @@ class Node : public NodeBase<Tdim> {
   unsigned dof_{std::numeric_limits<unsigned>::max()};
   //! Status
   bool status_{false};
+  //! Phase status
+  Eigen::Matrix<bool, 1, Tnphases> phase_status_;
   //! Solving status
   bool solving_status_{false};
   //! Mass
