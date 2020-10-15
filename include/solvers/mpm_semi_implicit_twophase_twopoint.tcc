@@ -78,12 +78,22 @@ bool mpm::MPMSemiImplicitTwoPhaseTwoPoint<Tdim>::solve() {
   // Compute nodal volume from gauss quadrature
   this->compute_nodes_gauss_volume();
 
-  mesh_->iterate_over_cells(
-      std::bind(&mpm::Cell<Tdim>::activate_nodes, std::placeholders::_1));
-
-  // Iterate over each particle to compute shapefn
-  mesh_->iterate_over_particles(std::bind(
-      &mpm::ParticleBase<Tdim>::compute_shapefn, std::placeholders::_1));
+#pragma omp parallel sections
+  {
+    // Spawn a task for initialising nodes and cells
+#pragma omp section
+    {
+      mesh_->iterate_over_cells(
+          std::bind(&mpm::Cell<Tdim>::activate_nodes, std::placeholders::_1));
+    }
+    // Spawn a task for particles
+#pragma omp section
+    {
+      // Iterate over each particle to compute shapefn
+      mesh_->iterate_over_particles(std::bind(
+          &mpm::ParticleBase<Tdim>::compute_shapefn, std::placeholders::_1));
+    }
+  }  // Wait to complete
 
   // Map porosity from solid to fluid particles
   this->compute_fluid_particle_porosity();
